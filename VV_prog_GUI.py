@@ -31,10 +31,13 @@ def run_jlink_cmd_file(cmd_file_name):
     cmd_with_args.append(cmd_file_name)
     #
     print(cmd_with_args)
-    p1 = subprocess.Popen(cmd_with_args, stdout=subprocess.PIPE)
-    
-    # Run the command
-    output = p1.communicate()[0]
+    try:
+        p1 = subprocess.Popen(cmd_with_args, stdout=subprocess.PIPE, timeout=30)
+        # Run the command
+        output = p1.communicate(timeout=30)[0]
+    except subprocess.TimeoutExpired:
+        print("ERROR: timeout - no output from J-Link!")
+        return status
 
     lines = output.splitlines()
     for line in lines:
