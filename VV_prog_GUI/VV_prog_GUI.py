@@ -137,11 +137,11 @@ def fw_post_task(serNo=None, cleanup=True, debug=False):
         fp.write("q\n")
     # Run JLink w. file input:
     if not debug:
-        status = run_jlink_cmd_file(PRE_TASKS_CMD_FILE)
+        status = run_jlink_cmd_file(POST_TASKS_CMD_FILE)
     # Remove file if specified:
     if cleanup:
         try:
-            os.remove(PRE_TASKS_CMD_FILE)
+            os.remove(POST_TASKS_CMD_FILE)
         except OSError:
             pass
     #
