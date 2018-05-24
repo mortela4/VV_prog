@@ -27,16 +27,16 @@ def run_jlink_cmd_file(cmd_file_name):
     #
     cmd_with_args = []
     cmd_with_args.append(JLINK_EXE_FILE)
-    cmd_with_args += JLINK_TARGET_OPTIONS
+    cmd_with_args.extend(JLINK_TARGET_OPTIONS)
     cmd_with_args.append(cmd_file_name)
     #
-    print(cmd_with_args)
+    print("Running: " + str(cmd_with_args))
     try:
-        p1 = subprocess.Popen(cmd_with_args, stdout=subprocess.PIPE, timeout=30)
+        p1 = subprocess.Popen(cmd_with_args, stdout=subprocess.PIPE)
         # Run the command
         output = p1.communicate(timeout=30)[0]
     except subprocess.TimeoutExpired:
-        print("ERROR: timeout - no output from J-Link!")
+        print("ERROR: timeout from running J-Link!")
         return status
 
     lines = output.splitlines()
@@ -54,8 +54,9 @@ def fw_pre_task(erase=True, cleanup=True, debug=False):
     with open(PRE_TASKS_CMD_FILE, 'w') as fp:
         fp.write("r\n")
         if erase:
-            fp.writelines("erase\n")
-        fp.writelines("w4 0x5c00 0x00000001\n")
+            fp.write("erase\n")
+        fp.write("w4 0x5c00 0x00000001\n")
+        fp.write("q\n")
     # Run JLink w. file input:
     if not debug:
         status = run_jlink_cmd_file(PRE_TASKS_CMD_FILE)
@@ -78,7 +79,8 @@ def fw_bl_prog(security=False, cleanup=True, debug=False):
     #
     with open(BL_TASKS_CMD_FILE, 'w') as fp:
         fp.write("r\n")
-        fp.writelines("loadfile %s\n" % bootloader_srec)
+        fp.write("loadfile %s\n" % bootloader_srec)
+        fp.write("q\n")
     # Run JLink w. file input:
     if not debug:
         status = run_jlink_cmd_file(BL_TASKS_CMD_FILE)
@@ -110,7 +112,8 @@ def fw_app_prog(num=None, cleanup=True, debug=False):
     #
     with open(file_name, 'w') as fp:
         fp.write("r\n")
-        fp.writelines("loadfile " + fw_name + "\n")
+        fp.write("loadfile " + fw_name + "\n")
+        fp.write("q\n")
     # Run JLink w. file input:
     if not debug:
         status = run_jlink_cmd_file(file_name)
@@ -131,6 +134,7 @@ def fw_post_task(serNo=None, cleanup=True, debug=False):
         fp.write("r\n")
         fp.write("w4 0x5c08 " + hex(serNo) + "\n")
         fp.write("read32 0x5c00,12\n")
+        fp.write("q\n")
     # Run JLink w. file input:
     if not debug:
         status = run_jlink_cmd_file(PRE_TASKS_CMD_FILE)
