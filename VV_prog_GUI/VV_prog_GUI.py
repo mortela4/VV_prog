@@ -67,7 +67,7 @@ def fw_pre_task(erase=True, cleanup=True, debug=False):
         fp.write("q\n")
     # Run JLink w. file input:
     if not debug:
-        status, = run_jlink_cmd_file(PRE_TASKS_CMD_FILE)
+        status, out_text = run_jlink_cmd_file(PRE_TASKS_CMD_FILE)
     # Remove file if specified:
     if cleanup:
         try:
@@ -91,7 +91,7 @@ def fw_bl_prog(security=False, cleanup=True, debug=False):
         fp.write("q\n")
     # Run JLink w. file input:
     if not debug:
-        status, = run_jlink_cmd_file(BL_TASKS_CMD_FILE)
+        status, out_text = run_jlink_cmd_file(BL_TASKS_CMD_FILE)
     # Remove file if specified:
     if cleanup:
         try:
@@ -124,7 +124,7 @@ def fw_app_prog(num=None, cleanup=True, debug=False):
         fp.write("q\n")
     # Run JLink w. file input:
     if not debug:
-        status, = run_jlink_cmd_file(file_name)
+        status, out_text = run_jlink_cmd_file(file_name)
     # Remove file if specified:
     if cleanup:
         try:
@@ -145,7 +145,7 @@ def fw_post_task(serNo=None, cleanup=True, debug=False):
         fp.write("q\n")
     # Run JLink w. file input:
     if not debug:
-        status, = run_jlink_cmd_file(POST_TASKS_CMD_FILE)
+        status, out_text = run_jlink_cmd_file(POST_TASKS_CMD_FILE)
     # Remove file if specified:
     if cleanup:
         try:
@@ -197,7 +197,7 @@ def fw_verify_imagenumber(img_num=1, cleanup=True, verbose=False):
             print(txt)
     #
     if cmd_status:
-        print("Output analysis:", flush=True)
+        print("\r\nOutput analysis:", flush=True)
         print("----------------", flush=True)
         for line in out_text:
             if line.startswith(IMAGE_NUM_FLASH_ADDR):
@@ -208,6 +208,8 @@ def fw_verify_imagenumber(img_num=1, cleanup=True, verbose=False):
                     if val == 1:
                         print("Readback-value=%s is equal to expected(=1)." % val)
                         status = True
+                    else:
+                        print("ERROR: Readback-value=%s is NOT equal to expected(=1)!" % val)
                 except ValueError:
                     print("%s is not a valid HEX-string!")
     return status
@@ -237,7 +239,7 @@ def fw_verify_serialnumber(snum, cleanup=True, verbose=False):
             print(txt)
     #
     if cmd_status:
-        print("Output analysis:", flush=True)
+        print("\r\nOutput analysis:", flush=True)
         print("----------------", flush=True)
         for line in out_text:
             if line.startswith(SER_NUM_FLASH_ADDR):
@@ -248,9 +250,10 @@ def fw_verify_serialnumber(snum, cleanup=True, verbose=False):
                     if val == snum:
                         print("Readback-value=%s is equal to given serial number." % val)
                         status = True
+                    else:
+                        print("ERROR: Readback-value=%s is NOT equal to given serial number(=snum)." % val)
                 except ValueError:
-                    print("%s is not a valid HEX-string!")
-    #
+                    print("%s is not a valid HEX-string!")    #
     return status
 
 
@@ -322,11 +325,11 @@ def parse_args_and_execute():
         # Test only:
         # ret_val = run_fw_programming(fw_type, serial_num, erase_flash_first, cleanup=False, debug=True)
         # Non-test environment:
-        #ret_val1 = run_fw_programming(fw_type, serial_num, erase_flash_first)
-        ret_val2 = run_fw_verification(serial_num)
+        status1 = run_fw_programming(fw_type, serial_num, erase_flash_first)
+        status2 = run_fw_verification(serial_num)
         #
         print("\r\n\r\n================================")
-        if ret_val2:
+        if status1 and status2:
             print("PASS: succesful programming.")
         else:
             print("FAIL: programming error!!")
