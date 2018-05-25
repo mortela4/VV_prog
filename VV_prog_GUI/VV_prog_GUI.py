@@ -16,13 +16,17 @@ BL_TASKS_CMD_FILE = "VV_bl_tasks.tmp.jlink"
 FW1_TASKS_CMD_FILE = "VV_fw1_prog.tmp.jlink"
 FW2_TASKS_CMD_FILE = "VV_fw2_prog.tmp.jlink"
 POST_TASKS_CMD_FILE = "VV_post_tasks.tmp.jlink"
+#
+VERIFY_IMAGENUM_CMD_FILE = "VV_verify_imagenum.tmp.jlink"
+VERIFY_SERNUM_CMD_FILE = "VV_verify_sernum.tmp.jlink"
 
 
 use_gui = True
 srec_path = None
 
 
-def run_jlink_cmd_file(cmd_file_name):
+def run_jlink_cmd_file(cmd_file_name, verbose=False):
+    SUBPROC_RETVAL_STATUS_SUCCESS = 0
     status = False
     #
     cmd_with_args = []
@@ -40,12 +44,16 @@ def run_jlink_cmd_file(cmd_file_name):
         return status
 
     lines = output.splitlines()
+    lines_out = []
     for line in lines:
-        print(line)
+            line_str = str(line, encoding='utf-8')
+            lines_out.append(line_str)
+            if verbose:
+                print(line_str)
 
-    status = p1.returncode
+    status = (p1.returncode == SUBPROC_RETVAL_STATUS_SUCCESS)
     #
-    return status
+    return status, lines_out
 
 
 def fw_pre_task(erase=True, cleanup=True, debug=False):
@@ -59,7 +67,7 @@ def fw_pre_task(erase=True, cleanup=True, debug=False):
         fp.write("q\n")
     # Run JLink w. file input:
     if not debug:
-        status = run_jlink_cmd_file(PRE_TASKS_CMD_FILE)
+        status, = run_jlink_cmd_file(PRE_TASKS_CMD_FILE)
     # Remove file if specified:
     if cleanup:
         try:
@@ -83,7 +91,7 @@ def fw_bl_prog(security=False, cleanup=True, debug=False):
         fp.write("q\n")
     # Run JLink w. file input:
     if not debug:
-        status = run_jlink_cmd_file(BL_TASKS_CMD_FILE)
+        status, = run_jlink_cmd_file(BL_TASKS_CMD_FILE)
     # Remove file if specified:
     if cleanup:
         try:
@@ -116,7 +124,7 @@ def fw_app_prog(num=None, cleanup=True, debug=False):
         fp.write("q\n")
     # Run JLink w. file input:
     if not debug:
-        status = run_jlink_cmd_file(file_name)
+        status, = run_jlink_cmd_file(file_name)
     # Remove file if specified:
     if cleanup:
         try:
@@ -133,11 +141,11 @@ def fw_post_task(serNo=None, cleanup=True, debug=False):
     with open(POST_TASKS_CMD_FILE, 'w') as fp:
         fp.write("r\n")
         fp.write("w4 0x5c08 " + hex(serNo) + "\n")
-        fp.write("read32 0x5c00,12\n")
+        fp.write("mem32 0x5c00,12\n")
         fp.write("q\n")
     # Run JLink w. file input:
     if not debug:
-        status = run_jlink_cmd_file(POST_TASKS_CMD_FILE)
+        status, = run_jlink_cmd_file(POST_TASKS_CMD_FILE)
     # Remove file if specified:
     if cleanup:
         try:
@@ -166,20 +174,97 @@ def run_fw_programming(fw_type, serial_num, erase=True, cleanup=True, debug=Fals
 
 # ******************** FW verification ***********************************
 
-def fw_verify_imagenumber(img_num=1):
-    return True
+def fw_verify_imagenumber(img_num=1, cleanup=True, verbose=False):
+    status = False
+    IMAGE_NUM_FLASH_ADDR = "00005C00"
+    #
+    with open(VERIFY_IMAGENUM_CMD_FILE, 'w') as fp:
+        fp.write("r\n")
+        fp.write("mem32 0x00005c00,1\n")
+        fp.write("q\n")
+    # Run JLink w. file input:
+    cmd_status, out_text = run_jlink_cmd_file(VERIFY_IMAGENUM_CMD_FILE)
+    # Remove file if specified:
+    if cleanup:
+        try:
+            os.remove(VERIFY_IMAGENUM_CMD_FILE)
+        except OSError:
+            pass
+    #
+    if verbose:
+        print("Cmd-output:", flush=True)
+        for txt in out_text:
+            print(txt)
+    #
+    if cmd_status:
+        print("Output analysis:", flush=True)
+        print("----------------", flush=True)
+        for line in out_text:
+            if line.startswith(IMAGE_NUM_FLASH_ADDR):
+                addr_content = line.split('=')[-1]      # First field is address, last field is value
+                print("Content of address %s = %s" % (IMAGE_NUM_FLASH_ADDR, addr_content))
+                try:
+                    val = int(addr_content, 16)
+                    if val == 1:
+                        print("Readback-value=%s is equal to expected(=1)." % val)
+                        status = True
+                except ValueError:
+                    print("%s is not a valid HEX-string!")
+    return status
 
 
-def fw_verify_serialnumber(snum):
-    return True
+def fw_verify_serialnumber(snum, cleanup=True, verbose=False):
+    print("Running FW serial number verification ...", flush=True)
+    status = False
+    SER_NUM_FLASH_ADDR = "00005C08"
+    #
+    with open(VERIFY_SERNUM_CMD_FILE, 'w') as fp:
+        fp.write("r\n")
+        fp.write("mem32 0x00005c08,1\n")
+        fp.write("q\n")
+    # Run JLink w. file input:
+    cmd_status, out_text = run_jlink_cmd_file(VERIFY_SERNUM_CMD_FILE)
+    # Remove file if specified:
+    if cleanup:
+        try:
+            os.remove(VERIFY_SERNUM_CMD_FILE)
+        except OSError:
+            pass
+    #
+    if verbose:
+        print("Cmd-output:", flush=True)
+        for txt in out_text:
+            print(txt)
+    #
+    if cmd_status:
+        print("Output analysis:", flush=True)
+        print("----------------", flush=True)
+        for line in out_text:
+            if line.startswith(SER_NUM_FLASH_ADDR):
+                addr_content = line.split('=')[-1]      # First field is address, last field is value
+                print("Content of address %s = %s" % (SER_NUM_FLASH_ADDR, addr_content))
+                try:
+                    val = int(addr_content, 16)
+                    if val == snum:
+                        print("Readback-value=%s is equal to given serial number." % val)
+                        status = True
+                except ValueError:
+                    print("%s is not a valid HEX-string!")
+    #
+    return status
 
 
 def run_fw_verification(serial_num):
     #
     s1 = fw_verify_imagenumber()
+    print("\r\n\r\n")
     s2 = fw_verify_serialnumber(snum=serial_num)
     #
     status = s1 and s2
+    if status:
+        print("FW-verification: PASS")
+    else:
+        print("FW-verification: FAIL!")
     #
     return status
 
@@ -237,13 +322,15 @@ def parse_args_and_execute():
         # Test only:
         # ret_val = run_fw_programming(fw_type, serial_num, erase_flash_first, cleanup=False, debug=True)
         # Non-test environment:
-        #ret_val = run_fw_programming(fw_type, serial_num, erase_flash_first)
-        ret_val = run_fw_verification(serial_num)
+        #ret_val1 = run_fw_programming(fw_type, serial_num, erase_flash_first)
+        ret_val2 = run_fw_verification(serial_num)
         #
-        if ret_val:
+        print("\r\n\r\n================================")
+        if ret_val2:
             print("PASS: succesful programming.")
         else:
             print("FAIL: programming error!!")
+        print("================================\r\n")
     #
     print("Completed FW-programming.")
 
