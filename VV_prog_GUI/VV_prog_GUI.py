@@ -164,6 +164,28 @@ def run_fw_programming(fw_type, serial_num, erase=True, cleanup=True, debug=Fals
     return status
 
 
+# ******************** FW verification ***********************************
+
+def fw_verify_imagenumber(img_num=1):
+    return True
+
+
+def fw_verify_serialnumber(snum):
+    return True
+
+
+def run_fw_verification(serial_num):
+    #
+    s1 = fw_verify_imagenumber()
+    s2 = fw_verify_serialnumber(snum=serial_num)
+    #
+    status = s1 and s2
+    #
+    return status
+
+
+# ******************** Generic stuff *************************************
+
 def parse_args_and_execute():
     """ Parse args and run bg-process(es) """
     global srec_path
@@ -215,7 +237,8 @@ def parse_args_and_execute():
         # Test only:
         # ret_val = run_fw_programming(fw_type, serial_num, erase_flash_first, cleanup=False, debug=True)
         # Non-test environment:
-        ret_val = run_fw_programming(fw_type, serial_num, erase_flash_first)
+        #ret_val = run_fw_programming(fw_type, serial_num, erase_flash_first)
+        ret_val = run_fw_verification(serial_num)
         #
         if ret_val:
             print("PASS: succesful programming.")
