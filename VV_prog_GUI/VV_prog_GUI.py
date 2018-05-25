@@ -19,6 +19,8 @@ POST_TASKS_CMD_FILE = "VV_post_tasks.tmp.jlink"
 #
 VERIFY_IMAGENUM_CMD_FILE = "VV_verify_imagenum.tmp.jlink"
 VERIFY_SERNUM_CMD_FILE = "VV_verify_sernum.tmp.jlink"
+#
+DUMMY_TASKS_CMD_FILE = "VV_dummy_read.tmp.jlink"
 
 
 use_gui = True
@@ -56,14 +58,17 @@ def run_jlink_cmd_file(cmd_file_name, verbose=False):
     return status, lines_out
 
 
+# ********************* Flash prog tasks **********************
+
 def fw_pre_task(erase=True, cleanup=True, debug=False):
     status = False
     #
     with open(PRE_TASKS_CMD_FILE, 'w') as fp:
         fp.write("r\n")
         if erase:
+            # fp.write("unlock Kinetis\n")      # May be needed (assess!)
             fp.write("erase\n")
-        fp.write("w4 0x5c00 0x00000001\n")
+            # fp.write("w4 0x0000040C 0xFFFFFFFF")   # Remove Flash-security
         fp.write("q\n")
     # Run JLink w. file input:
     if not debug:
@@ -140,8 +145,8 @@ def fw_post_task(serNo=None, cleanup=True, debug=False):
     #
     with open(POST_TASKS_CMD_FILE, 'w') as fp:
         fp.write("r\n")
-        fp.write("w4 0x5c08 " + hex(serNo) + "\n")
-        fp.write("mem32 0x5c00,12\n")
+        fp.write("w4 0x5c00 0x00000001\n")              # Set image-number=1
+        fp.write("w4 0x5c08 " + hex(serNo) + "\n")      # Set serial number
         fp.write("q\n")
     # Run JLink w. file input:
     if not debug:
@@ -257,7 +262,33 @@ def fw_verify_serialnumber(snum, cleanup=True, verbose=False):
     return status
 
 
+def fw_dummy_task(cleanup=True, debug=False, verbose=True):
+    status = False
+    #
+    with open(DUMMY_TASKS_CMD_FILE, 'w') as fp:
+        fp.write("r\n")
+        fp.write("mem32 0x5c00,12\n")
+        fp.write("q\n")
+    # Run JLink w. file input:
+    if not debug:
+        status, out_text = run_jlink_cmd_file(DUMMY_TASKS_CMD_FILE)
+    if verbose:
+        for line in out_text:
+            print(line)
+    # Remove file if specified:
+    if cleanup:
+        try:
+            os.remove(POST_TASKS_CMD_FILE)
+        except OSError:
+            pass
+    #
+    return status
+
+
 def run_fw_verification(serial_num):
+    #
+    # Run dummy:
+    fw_dummy_task()
     #
     s1 = fw_verify_imagenumber()
     print("\r\n\r\n")
