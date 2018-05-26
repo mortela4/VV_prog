@@ -369,7 +369,7 @@ def parse_args_and_execute():
     print("Completed FW-programming.")
 
 
-@Gooey
+@Gooey(advanced=True)
 def gui_wrapper():
     parse_args_and_execute()
 
