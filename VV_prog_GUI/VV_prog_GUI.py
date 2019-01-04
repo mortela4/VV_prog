@@ -9,6 +9,7 @@ from gooey import Gooey, GooeyParser
 
 # JLink command-line for KL27Z target attach:
 JLINK_EXE_FILE = 'JLink.exe'
+# TODO: change in future to accomodate different devices??
 JLINK_TARGET_OPTIONS = ['-device', 'MKL27Z256XXX4', '-if', 'SWD', '-speed', '4000', '-autoconnect', '1']
 # File names:
 PRE_TASKS_CMD_FILE = "VV_pre_tasks.tmp.jlink"
@@ -66,9 +67,8 @@ def fw_pre_task(erase=True, cleanup=True, debug=False):
     with open(PRE_TASKS_CMD_FILE, 'w') as fp:
         fp.write("r\n")
         if erase:
-            # fp.write("unlock Kinetis\n")      # May be needed (assess!)
+            fp.write("unlock Kinetis\n")      # Needed if device is programmed 1st time!
             fp.write("erase\n")
-            # fp.write("w4 0x0000040C 0xFFFFFFFF")   # Remove Flash-security
         fp.write("q\n")
     # Run JLink w. file input:
     if not debug:
