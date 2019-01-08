@@ -8,7 +8,7 @@ import subprocess
 # JLink command-line for ML16Z target attach:
 JLINK_EXE_FILE = 'JLink.exe'
 # TODO: change in future to accomodate different devices??
-JLINK_TARGET_OPTIONS = ['-device', 'MKL16Z256XXX4', '-if', 'SWD', '-speed', '4000', '-autoconnect', '1']
+JLINK_TARGET_OPTIONS = ['-device', mcu_targets[mcu_name], '-if', 'SWD', '-speed', '4000', '-autoconnect', '1']
 # File names:
 PRE_TASKS_CMD_FILE = "pre_tasks.tmp.jlink"
 FWPROG_TASKS_CMD_FILE = "fw_prog.tmp.jlink"
@@ -19,9 +19,24 @@ VERIFY_SERNUM_CMD_FILE = "verify_sernum.tmp.jlink"
 DUMMY_TASKS_CMD_FILE = "dummy_read.tmp.jlink"
 
 
+# MCU targets:
+mcu_targets = {'kl16z64': 'MKL16Z64XXX4',
+               'kl16z128': 'MKL16Z128XXX4',
+               'kl16z256': 'MKL16Z256XXX4',
+               'kl25z64': 'MKL25Z64XXX4',
+               'kl25z128': 'MKL25Z128XXX4',
+               'kl25z256': 'MKL25Z256XXX4',
+               'kl26z64': 'MKL26Z64XXX4',
+               'kl26z128': 'MKL26Z128XXX4',
+               'kl26z256': 'MKL26Z256XXX4',
+               'kl27z64': 'MKL27Z64XXX4',
+               'kl27z128': 'MKL27Z128XXX4',
+               'kl27z256': 'MKL27Z256XXX4'}
+
 # Defaults:
 fw_path = '.'
 fw_name = 'firmware.hex'
+mcu_name = 'kl16z256'
 
 
 def run_jlink_cmd_file(cmd_file_name, verbose=False):
@@ -223,6 +238,7 @@ def parse_args_and_execute():
     """ Parse args and run bg-process(es) """
     global fw_path
     global fw_name
+    global mcu_name
     #
     parser = argparse.ArgumentParser(description="'MKL16Z_fwprogcli' command-line utility.\r\n \
                                                      Pre-requisites: FW-file (.srec or .hex) must reside in run-folder.")
@@ -232,6 +248,8 @@ def parse_args_and_execute():
                         help='Serial number to be programmed into upper 4 bytes of Flash')
     parser.add_argument('--fw', action="store", dest="fw_name", type=str, default="firmware.hex",
                         help="Firmware HEX/SREC file name (default: 'firmware.hex')")
+    parser.add_argument('--device', '-d', action="store", dest="mcu_name", type=str, default="kl16z256",
+                        help='MCU device type: kl16z64, kl16z128, kl16z256, kl25z64, kl25z128, kl25z256, kl26z64, kl26z128, kl26z256, kl27z64, kl27z128, kl27z256')
     parser.add_argument('--erase', '-e', action="store", dest="erase_first", type=str, default="yes",
                         help='Erase target Flash before programming')
 
@@ -255,6 +273,14 @@ def parse_args_and_execute():
         # Should NEVER happen - maybe simplify this?
         print("Using 'firmware.hex' for default firmware-name ...")
         fw_name = 'firmware.hex'   # TODO: assess - rather have this as required field???
+    else:
+        fw_name = cli_args.fw_name
+        print("Using %s as firmware-name ..." % fw_name)
+    # MCU device:
+    if cli_args.mcu_name is None:
+        # Should NEVER happen - maybe simplify this?
+        print("Using 'kl16z256' for default MCU device-name ...")
+        mcu_name = 'kl16z256'   # TODO: assess - rather have this as required field???
     else:
         fw_name = cli_args.fw_name
         print("Using %s as firmware-name ..." % fw_name)
