@@ -44,14 +44,13 @@ def parse_args_and_execute():
                         default="kl16z256",
                         widget='Dropdown')
     #
-    parser.add_argument('--erase', '-e',
-                        action="store",
+    parser.add_argument("-e", "--erase",
+                        action="store_true",
                         dest="erase_first",
-                        choices=['yes', 'no'],
-                        type=str,
-                        default="yes",
-                        widget='Dropdown')
-
+                        default=True,
+                        widget='CheckBox',
+                        help='Erase target (completely) before programming')
+    #
     cli_args = parser.parse_args(sys.argv[1:])
     # Assign program arguments to variables:
     # ======================================
