@@ -19,7 +19,6 @@ mcu_targets = {'kl16z64': ('MKL16Z64XXX4', 64),
                'kl27z256': ('MKL27Z256XXX4', 256)}
 
 # Defaults:
-fw_path = '.'
 fw_name = ''
 mcu_name = 'kl16z256'
 flash_offset_from_end = 4   # in no. of bytes - e.g: 128KB - 4bytes = address 0x3fffc
@@ -111,12 +110,11 @@ def fw_pre_task(erase=True, cleanup=True, debug=False):
 
 
 def fw_app_prog(cleanup=True, debug=False):
-    global fw_path
     global fw_name
     # TODO: using globals affect testability - use arguments/locals instead!
     status = False
     # Add cmds:
-    firmware_name = fw_path + "\\" + fw_name
+    firmware_name = fw_name
     #
     file_name = FWPROG_TASKS_CMD_FILE
     with open(file_name, 'w') as fp:

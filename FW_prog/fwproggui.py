@@ -9,47 +9,79 @@ from FW_prog.fwprog import mcu_targets, run_fw_programming, run_fw_verification
 
 def parse_args_and_execute():
     """ Parse args and run bg-process(es) """
-    global fw_path
     global fw_name
     global mcu_name
     #
     parser = GooeyParser()
     #
-    parser.add_argument('--path', '-p',
-                        action="store",
-                        dest="fw_dir",
-                        type=str,
-                        widget='DirChooser',
-                        help='FW pathname')
     # Std.args NOT needing 'special handling':
-    parser.add_argument('--serial', '-s',
+    id_group = parser.add_argument_group(
+        "System ID Options",
+        "Customize product ID, serial number etc."
+    )
+    id_group.add_argument('--serial', '-s',
                         action="store",
                         dest="ser_num",
                         type=int,
-                        help='Serial number to be programmed into upper 4 bytes of Flash')
-    parser.add_argument('--fw',
+                        help='Serial number to be programmed into upper 4 bytes of Flash',
+                        gooey_options={
+                            'height': 100,
+                            'full_width': 10,
+                            'hide_heading': True,
+                            'columns': 1-100,
+                        })
+    fw_group = parser.add_argument_group(
+        "Firmware Options",
+        "Choose FW etc."
+    )
+    fw_group.add_argument('--fw',
                         action="store",
                         dest="fw_name",
                         type=str,
-                        default="firmware.hex",
+                        default="",
                         widget='FileChooser',
-                        help="Firmware HEX/SREC file name (default: 'firmware.hex')")
+                        help="Firmware HEX/SREC file name (default: 'firmware.hex')",
+                        gooey_options={
+                            'height': 100,
+                            'hide_heading': True,
+                            'columns': 1-100,
+                        })
     #
+    device_group = parser.add_argument_group(
+        "Device Options",
+        "Choose MCU type etc."
+    )
     mcu_types_list = list(mcu_targets.keys())
-    parser.add_argument('--device', '-d',
+    device_group.add_argument('--device', '-d',
                         action="store",
                         dest="mcu_name",
                         choices=mcu_types_list,
                         type=str,
                         default="kl16z256",
-                        widget='Dropdown')
+                        widget='Dropdown',
+                        help='Kinetis KL-family MCU type.',
+                        gooey_options={
+                            'height': 100,
+                            'width': 8,
+                            'hide_heading': True,
+                            'columns': 1,
+                        })
     #
-    parser.add_argument("-e", "--erase",
+    flash_group = parser.add_argument_group(
+        "Flash Options",
+        "Erase-before-program etc."
+    )
+    flash_group.add_argument("-e", "--erase",
                         action="store_true",
                         dest="erase_first",
                         default=True,
                         widget='CheckBox',
-                        help='Erase target (completely) before programming')
+                        help='Erase target (completely) before programming',
+                        gooey_options={
+                            'height': 100,
+                            'hide_heading': True,
+                            'columns': 1,
+                        })
     #
     cli_args = parser.parse_args(sys.argv[1:])
     # Assign program arguments to variables:
@@ -106,7 +138,11 @@ def parse_args_and_execute():
     print("Completed FW-programming.")
 
 
-@Gooey(advanced=True)
+@Gooey(advanced=True,
+       program_name="Kinetis FW-Programming GUI",
+       default_size=(600, 800),
+       optional_cols=1,
+       run_validators=True)
 def gui_wrapper():
     parse_args_and_execute()
 
