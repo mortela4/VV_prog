@@ -1,7 +1,7 @@
 import sys
 from gooey import Gooey, GooeyParser
 #
-from FW_prog.fwprog import mcu_targets, run_fw_programming, run_fw_verification
+from fwprog import mcu_targets, run_fw_programming, run_fw_verification
 
 
 # ******************** Generic stuff *************************************
@@ -86,12 +86,6 @@ def parse_args_and_execute():
     cli_args = parser.parse_args(sys.argv[1:])
     # Assign program arguments to variables:
     # ======================================
-    # FW directory:
-    if cli_args.fw_dir is None:
-        print("Using '.' for default firmware-path ...")
-    else:
-        fw_path = cli_args.fw_dir
-        print("Using %s as firmware-path ..." % fw_path)
     # FW serial number:
     if cli_args.ser_num is None:
         print("Argument '-s' ('--serial') is required - a serial number MUST be specified!")
@@ -112,30 +106,30 @@ def parse_args_and_execute():
         print("Using 'kl16z256' for default MCU device-name ...")
         mcu_name = 'kl16z256'  # TODO: assess - rather have this as required field???
     else:
-        fw_name = cli_args.fw_name
-        print("Using %s as firmware-name ..." % fw_name)
+        mcu_name = cli_args.mcu_name
+        print("Using %s as MCU-name ..." % mcu_name)
     # Erase (via MassErase) target Flash first or not:
     erase_flash_first = cli_args.erase_first
 
     # Run:
-    if erase_flash_first not in ['yes', 'no']:
-        print("Invalid value for '--erase' option!\nLegal values: 'yes' or 'no' ")
-        sys.exit(1)
-    else:
-        # Test only:
-        # ret_val = run_fw_programming(fw_name, serial_num, erase_flash_first, cleanup=False, debug=True)
-        # Non-test environment:
-        status1 = run_fw_programming(fw_name, serial_num, erase_flash_first)
-        status2 = run_fw_verification(serial_num)
-        #
-        print("\r\n\r\n================================")
-        if status1 and status2:
-            print("PASS: successful programming.")
-        else:
-            print("FAIL: programming error!!")
-        print("================================\r\n")
+    # ====
+    # Test only:
+    # ----------
+    # ret_val = run_fw_programming(fw_name, serial_num, erase_flash_first, cleanup=False, debug=True)
+    # ----------
+    # Non-test environment:
+    # ---------------------
+    status1 = run_fw_programming(fw_name, serial_num, erase_flash_first)
+    status2 = run_fw_verification(serial_num)
     #
-    print("Completed FW-programming.")
+    print("\r\n\r\n================================")
+    if status1 and status2:
+        print("PASS: successful programming.", flush=True)
+    else:
+        print("FAIL: programming error!!", flush=True)
+    print("================================\r\n", flush=True)
+    #
+    print("Completed FW-programming.", flush=True)
 
 
 @Gooey(advanced=True,
@@ -150,6 +144,7 @@ def gui_wrapper():
 # ***************** MAIN ************************
 if __name__ == "__main__":
     gui_wrapper()
+
 
 
 
