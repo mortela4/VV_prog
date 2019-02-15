@@ -51,7 +51,7 @@ def get_mcu_device_specifics(mcu_type: str=None):
 
 def run_jlink_cmd_file(cmd_file_name, verbose=False):
     global mcu_name
-    mcu_target = mcu_targets[mcu_name]
+    mcu_target, flash_size = mcu_targets[mcu_name]
     #
     SUBPROC_RETVAL_STATUS_SUCCESS = 0
     status = False
