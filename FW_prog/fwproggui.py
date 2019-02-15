@@ -1,7 +1,7 @@
 import sys
 from gooey import Gooey, GooeyParser
 #
-from fwprog import mcu_targets, run_fw_programming, run_fw_verification
+from FW_prog.fwprog import mcu_targets, run_fw_programming, run_fw_verification
 
 
 # ******************** Generic stuff *************************************
