@@ -2,15 +2,15 @@ import gooey
 gooey_root = os.path.dirname(gooey.__file__)
 gooey_languages = Tree(os.path.join(gooey_root, 'languages'), prefix = 'gooey/languages')
 gooey_images = Tree(os.path.join(gooey_root, 'images'), prefix = 'gooey/images')
-a = Analysis(['fwproggui.py'],
-             pathex=['C:\\Users\\MortenL\\Anaconda3\\Scripts'],
+a = Analysis(['fwproggui.py', 'fwprog.py'],
+             pathex=['E:\\kode\\py_proj\\VV_prog'],
              hiddenimports=[],
              hookspath=None,
              runtime_hooks=None,
              )
 pyz = PYZ(a.pure)
 
-options = [('u', None, 'OPTION'), ('u', None, 'OPTION'), ('u', None, 'OPTION')]
+options = [('u', None, 'OPTION')]
 
 exe = EXE(pyz,
           a.scripts,
@@ -18,13 +18,13 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           options,
-          gooey_languages, # Add them in to collected files
-          gooey_images, # Same here.
-          name='fwprog_gui.exe',
+          gooey_languages,
+          gooey_images,
+          name='fwprog_gui',
           debug=False,
           strip=None,
           upx=True,
-          console=False,
+          console=True,
           windowed=True,
           icon=os.path.join(gooey_root, 'images', 'program_icon.ico'))
 
