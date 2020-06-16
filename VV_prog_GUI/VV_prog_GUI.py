@@ -9,7 +9,7 @@ from gooey import Gooey, GooeyParser
 
 # JLink command-line for KL27Z target attach:
 JLINK_EXE_FILE = 'JLink.exe'
-# TODO: change in future to accomodate different devices??
+# TODO: change in future to accommodate different devices??
 JLINK_TARGET_OPTIONS = ['-device', 'MKL27Z256XXX4', '-if', 'SWD', '-speed', '4000', '-autoconnect', '1']
 # File names:
 PRE_TASKS_CMD_FILE = "VV_pre_tasks.tmp.jlink"
@@ -49,10 +49,10 @@ def run_jlink_cmd_file(cmd_file_name, verbose=False):
     lines = output.splitlines()
     lines_out = []
     for line in lines:
-            line_str = str(line, encoding='utf-8')
-            lines_out.append(line_str)
-            if verbose:
-                print(line_str)
+        line_str = line.decode('latin1', 'ignore')
+        lines_out.append(line_str)
+        if verbose:
+            print(line_str)
 
     status = (p1.returncode == SUBPROC_RETVAL_STATUS_SUCCESS)
     #
