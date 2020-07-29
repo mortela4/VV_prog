@@ -49,10 +49,10 @@ def run_jlink_cmd_file(cmd_file_name, verbose=False):
     lines = output.splitlines()
     lines_out = []
     for line in lines:
-        line_str = line.decode('utf-8', 'ignore')
-        lines_out.append(line_str)
-        if verbose:
-            print(line_str)
+            line_str = str(line, encoding='utf-8')
+            lines_out.append(line_str)
+            if verbose:
+                print(line_str)
 
     status = (p1.returncode == SUBPROC_RETVAL_STATUS_SUCCESS)
     #
