@@ -305,9 +305,20 @@ def run_fw_verification(serial_num):
 
 # ******************** Generic stuff *************************************
 
-def run_irrigation_sensor_programming():
+# ------------------------------ Click setup -------------------------------
+@click.command()
+@click.option("--path", type=click.Path(file_okay=False, dir_okay=True), help="SREC directory", default=".")
+@click.option("--serial", type=int, help="Sensor serial number")
+@click.option("--fw", type=str, help="Sensor FW: '1' = FW1, '2' = FW2, 'bl' = boot-loader, 'all' = bl + 1 + 2")
+@click.option('--erase', type=click.Choice(['yes', 'no']), default='yes')
+# The command itself:
+def run_irrigation_sensor_programming(**argvs):
     """ Parse args and run bg-process(es) """
     global srec_path
+    #
+    # Test:
+    for k, v in argvs.items():
+        print(k, v, type(v))
     #
     serial_num = 12345
     fw_type = 2
@@ -323,7 +334,7 @@ def run_irrigation_sensor_programming():
         # Test only:
         # ret_val = run_fw_programming(fw_type, serial_num, erase_flash_first, cleanup=False, debug=True)
         # Non-test environment:
-        status1 = run_fw_programming(fw_type, serial_num, erase_flash_first)
+        status1 = run_fw_programming(fw_type, serial_num, erase)
         status2 = run_fw_verification(serial_num)
         #
         print("\r\n\r\n================================")
@@ -336,55 +347,8 @@ def run_irrigation_sensor_programming():
     print("Completed FW-programming.")
 
 
-# ***************************** Click setup *********************************
-
-    if use_gui:
-        stored_args = {'srec_directory': '.'}
-        #
-        parser = GooeyParser()
-        parser.add_argument('srec_dir',
-                            action='store',
-                            widget='DirChooser',
-                            default=stored_args.get('srec_directory'),
-                            help="Path to SREC-files for programming")
-    else:
-        parser = argparse.ArgumentParser(description="'VV_prog' command-line utility.\r\n \
-                                                     Pre-requisites: all FW-files (.srec) must reside in run-folder.")
-        parser.add_argument('--path', '-p', action="store", dest="srec_dir", type=str,
-                            help='Sensor serial number')
-    # Std.args NOT needing 'special handling':
-    parser.add_argument('--serial', '-s', action="store", dest="ser_num", type=int,
-                        help='Sensor serial number')
-    parser.add_argument('--fw', action="store", dest="fw_type", type=str, default="all",
-                        help="Sensor FW: '1' = FW1, '2' = FW2, 'bl' = boot-loader, 'all' = bl + 1 + 2")
-    parser.add_argument('--erase', '-e', action="store", dest="erase_first", type=str, default="yes",
-                        help='Erase target Flash before programming')
-
-    cli_args = parser.parse_args(sys.argv[1:])
-    if cli_args.srec_dir is None:
-        print("Using '.' for default SREC-path ...")
-    else:
-        srec_path = cli_args.srec_dir
-        print("Using %s as SREC-path ..." % srec_path)
-    #
-    if cli_args.ser_num is None:
-        print("Argument '-s' ('--serial') is required - a serial number MUST be specified!")
-        sys.exit(1)
-    else:
-        serial_num = cli_args.ser_num
-
-@click.command()
-@click.option("--file_path", type=click.Path(file_okay=False, dir_okay=True), help="SREC directory", default=".")
-@click.option("--add", type=int, help="input an integer number",\
-              hide_input=True)
-@click.option("--minus", type=float, help="input two numbers", nargs=2)
-@click.option("--flag", is_flag=True)
-@click.option('--shout/--no-shout', default=True)
-@click.option('--language', type=click.Choice(['c', 'c++']))
-@click.option('-v', '--verbose', count=True)
-
-
 # ***************** MAIN ************************
+
 if __name__ == "__main__":
     gui_it(run_irrigation_sensor_programming())
 
