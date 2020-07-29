@@ -352,9 +352,3 @@ def run_irrigation_sensor_programming(**argvs):
 if __name__ == "__main__":
     gui_it(run_irrigation_sensor_programming())
 
-
-
-
-
-
-
