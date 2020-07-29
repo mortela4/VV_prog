@@ -2,14 +2,18 @@ import sys
 import os
 import argparse
 import subprocess
-# For (optional) GUI
-from gooey import Gooey, GooeyParser
+import platform
 
 
 
 # JLink command-line for KL27Z target attach:
-JLINK_EXE_FILE = 'JLink.exe'
+if platform.system() == "Linux":
+    JLINK_EXE_FILE = 'JLinkExe'
+else:
+    JLINK_EXE_FILE = 'JLink.exe'
+
 JLINK_TARGET_OPTIONS = ['-device', 'MKL27Z256XXX4', '-if', 'SWD', '-speed', '4000', '-autoconnect', '1']
+
 # File names:
 PRE_TASKS_CMD_FILE = "VV_pre_tasks.tmp.jlink"
 BL_TASKS_CMD_FILE = "VV_bl_tasks.tmp.jlink"
@@ -18,7 +22,6 @@ FW2_TASKS_CMD_FILE = "VV_fw2_prog.tmp.jlink"
 POST_TASKS_CMD_FILE = "VV_post_tasks.tmp.jlink"
 
 
-use_gui = True
 srec_path = None
 
 
@@ -32,7 +35,7 @@ def run_jlink_cmd_file(cmd_file_name):
     #
     print(cmd_with_args)
     try:
-        p1 = subprocess.Popen(cmd_with_args, stdout=subprocess.PIPE, timeout=30)
+        p1 = subprocess.Popen(cmd_with_args, stdout=subprocess.PIPE)
         # Run the command
         output = p1.communicate(timeout=30)[0]
     except subprocess.TimeoutExpired:
@@ -164,20 +167,10 @@ def parse_args_and_execute():
     """ Parse args and run bg-process(es) """
     global srec_path
     #
-    if use_gui:
-        stored_args = {'srec_directory': '.'}
-        #
-        parser = GooeyParser()
-        parser.add_argument('srec_dir',
-                            action='store',
-                            widget='DirChooser',
-                            default=stored_args.get('srec_directory'),
-                            help="Path to SREC-files for programming")
-    else:
-        parser = argparse.ArgumentParser(description="'VV_prog' command-line utility.\r\n \
-                                                     Pre-requisites: all FW-files (.srec) must reside in run-folder.")
-        parser.add_argument('--path', '-p', action="store", dest="srec_dir", type=str,
-                            help='Sensor serial number')
+    parser = argparse.ArgumentParser(description="'VV_prog' command-line utility.\r\n \
+                                                 Pre-requisites: all FW-files (.srec) must reside in run-folder.")
+    parser.add_argument('--path', '-p', action="store", dest="srec_dir", type=str,
+                        help='Sensor serial number')
     # Std.args NOT needing 'special handling':
     parser.add_argument('--serial', '-s', action="store", dest="ser_num", type=int,
                         help='Sensor serial number')
@@ -221,17 +214,10 @@ def parse_args_and_execute():
     print("Completed FW-programming.")
 
 
-@Gooey
-def gui_wrapper():
-    parse_args_and_execute()
-
 
 # ***************** MAIN ************************
 if __name__ == "__main__":
-    if use_gui:
-        gui_wrapper()
-    else:
-        parse_args_and_execute()
+    parse_args_and_execute()
 
 
 
