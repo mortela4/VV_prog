@@ -49,7 +49,7 @@ def run_jlink_cmd_file(cmd_file_name, verbose=False):
     lines = output.splitlines()
     lines_out = []
     for line in lines:
-        line_str = line.decode('utf-8', 'ignore')
+        line_str = line.decode('latin1', 'ignore')
         lines_out.append(line_str)
         if verbose:
             print(line_str)
@@ -309,46 +309,84 @@ def run_fw_verification(serial_num):
 @click.command()
 @click.option("--path", type=click.Path(file_okay=False, dir_okay=True), help="SREC directory", default=".")
 @click.option("--serial", type=int, help="Sensor serial number")
-@click.option("--fw", type=str, help="Sensor FW: '1' = FW1, '2' = FW2, 'bl' = boot-loader, 'all' = bl + 1 + 2")
-@click.option('--erase', type=click.Choice(['yes', 'no']), default='yes')
+@click.option("--fw_type",
+              type=click.Choice(['1', '2', 'bl', 'all'], ),
+              default='all',
+              help="Sensor FW: '1' = FW1, '2' = FW2, 'bl' = boot-loader, 'all' = bl + 1 + 2")
+@click.option('--erase/--no_erase', default=True, help="Erase entire Flash memory before programming")
 # The command itself:
 def run_irrigation_sensor_programming(**argvs):
     """ Parse args and run bg-process(es) """
     global srec_path
     #
-    # Test:
-    for k, v in argvs.items():
-        print(k, v, type(v))
+    print("Startup ...")
+    print(argvs.items())
+    try:
+        arg = "--path"
+        path = str(argvs.items()[arg])
+        arg = "--fw_type"
+        fw_type = str(argvs.items()[arg])
+        arg = "--serial"
+        serial = int(argvs.items()[arg])
+        try:
+            arg = "--erase"
+            erase = bool(argvs.items()[arg])
+        except KeyError:
+            arg = "--no_erase"
+            erase = bool(argvs.items()[arg])
+    except KeyError:
+        raise Exception(f"Invalid option: '{arg}'!")
     #
-    serial_num = 12345
-    fw_type = 2
-    erase_flash_first = True
+    """
+    arg_map = {'--path': path, '--fw_type': fw_type, '--serial': serial, '--erase': erase, '--no_erase': erase}
+    """
+    #
+    # Parse:
+    for k, v in argvs.items():
+        """
+        try:
+            arg_map[k] = v
+        except KeyError:
+            raise Exception(f"Invalid option {k}!")
+        """
+        print(f"{k} ({type(k)}) = {v}")
     # Run:
-    if fw_type not in ['1', '2', 'bl', 'all']:
-        print("Invalid value for FW-type argument!\nLegal values: '1', '2', 'bl', 'all' ")
-        sys.exit(1)
-    elif erase_flash_first not in ['yes', 'no']:
-        print("Invalid value for '--erase' option!\nLegal values: 'yes' or 'no' ")
-        sys.exit(1)
+    print(f"path={path}, fw_type={fw_type}, serial={serial}, erase={erase} ...")
+    #
+    if path is None or fw_type is none or serial is None or erase is None:
+        raise Exception("Not all options specified!")
+    elif fw_type not in ['all', '1', '2', 'bl']:
+        raise Exception("Invalid value for FW-type argument!\nLegal values: '1', '2', 'bl', 'all' ")
+    elif serial is None:
+        raise Exception("No value given for serial number!\nLegal values: 1-65535")
     else:
         # Test only:
         # ret_val = run_fw_programming(fw_type, serial_num, erase_flash_first, cleanup=False, debug=True)
         # Non-test environment:
-        status1 = run_fw_programming(fw_type, serial_num, erase)
-        status2 = run_fw_verification(serial_num)
+        status1 = run_fw_programming(fw_type=fw_type, serial_num=serial, erase=erase)
+        status2 = run_fw_verification(serial_num=serial)
         #
         print("\r\n\r\n================================")
-        if status1 and status2:
-            print("PASS: succesful programming.")
+        #
+        total_status = status1 and status2
+        if total_status:
+            print("PASS: successful programming.")
         else:
             print("FAIL: programming error!!")
         print("================================\r\n")
     #
     print("Completed FW-programming.")
+    #
+    return total_status
 
 
 # ***************** MAIN ************************
 
 if __name__ == "__main__":
-    gui_it(run_irrigation_sensor_programming())
+    gui_it(run_irrigation_sensor_programming,
+           run_exit=False,
+           new_thread=True,
+           output="gui",
+           style="qdarkstyle",
+           width=500)
 
