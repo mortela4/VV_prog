@@ -49,7 +49,7 @@ def run_jlink_cmd_file(cmd_file_name, verbose=False):
     lines = output.splitlines()
     lines_out = []
     for line in lines:
-            line_str = str(line, encoding='utf-8')
+            line_str = line.decode('latin1', 'ignore')
             lines_out.append(line_str)
             if verbose:
                 print(line_str)
