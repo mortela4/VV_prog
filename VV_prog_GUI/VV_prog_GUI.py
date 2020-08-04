@@ -6,6 +6,9 @@ import subprocess
 from gooey import Gooey, GooeyParser
 
 
+VER_MAJOR = 1
+VER_MINOR = 0
+VER_SUBMINOR = 4     # Handle all encodings of terminal output text, and create absolute path from relative.
 
 # JLink command-line for KL27Z target attach:
 JLINK_EXE_FILE = 'JLink.exe'
@@ -55,10 +58,23 @@ def run_jlink_cmd_file(cmd_file_name, verbose=False):
     lines = output.splitlines()
     lines_out = []
     for line in lines:
-            line_str = line.decode('latin1', 'ignore')
+        try:
+            line_str = line.decode('ascii')
+        except UnicodeDecodeError:
+            try:
+                line_str = line.decode('utf-8')
+            except UnicodeDecodeError:
+                try:
+                    line_str = line.decode('latin1')
+                except UnicodeDecodeError:
+                    try:
+                        line_str = line.decode('latin2')
+                    except UnicodeDecodeError:
+                        line_str = "..."    # Giving up - inserting something 'well-formed' instead ...
+        finally:
             lines_out.append(line_str)
-            if verbose:
-                print(line_str)
+        if verbose:
+            print(line_str)
 
     status = (p1.returncode == SUBPROC_RETVAL_STATUS_SUCCESS)
     #
@@ -325,7 +341,7 @@ def parse_args_and_execute():
                             default=stored_args.get('srec_directory'),
                             help="Path to SREC-files for programming")
     else:
-        parser = argparse.ArgumentParser(description="'VV_prog' command-line utility.\r\n \
+        parser = argparse.ArgumentParser(description=f"'VV_prog' command-line utility ver.{VER_MAJOR}.{VER_MINOR}.{VER_SUBMINOR}\r\n \
                                                      Pre-requisites: all FW-files (.srec) must reside in run-folder.")
         parser.add_argument('--path', '-p', action="store", dest="srec_dir", type=str,
                             help='Sensor serial number')
