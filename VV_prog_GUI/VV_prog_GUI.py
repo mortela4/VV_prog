@@ -28,12 +28,18 @@ use_gui = True
 srec_path = None
 
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
+
+
 def run_jlink_cmd_file(cmd_file_name, verbose=False):
     SUBPROC_RETVAL_STATUS_SUCCESS = 0
     status = False
     #
     cmd_with_args = []
-    cmd_with_args.append(JLINK_EXE_FILE)
+    cmd_with_args.append(resource_path(JLINK_EXE_FILE))
     cmd_with_args.extend(JLINK_TARGET_OPTIONS)
     cmd_with_args.append(cmd_file_name)
     #
