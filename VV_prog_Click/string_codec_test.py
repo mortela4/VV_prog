@@ -29,15 +29,15 @@ def run_exe_file(exe_file_name, verbose=True):
     for line in lines:
         try:
             line_str = line.decode('ascii')
-        except Exception as e:
+        except UnicodeDecodeError as e:
             print(f"Exception trying to decode as ASCII (naive): {e}")
             try:
                 line_str = line.decode('utf-8')
-            except Exception as e:
+            except UnicodeDecodeError as e:
                 print(f"Exception trying to decode as UTF-8: {e}")
                 try:
                     line_str = line.decode('latin1')
-                except Exception as e:
+                except UnicodeDecodeError as e:
                     print(f"Exception trying to decode as ISO LATIN-1: {e}")
                     line_str = "..."
         finally:
@@ -51,6 +51,12 @@ def run_exe_file(exe_file_name, verbose=True):
 
 
 if __name__ == "__main__":
+    stivei = resource_path('streng_codec.exe')
+    print(f"Path to 'streng_codec.exe': {stivei}")
+    #
+    stivei = resource_path('JLink.exe')
+    print(f"Path to 'JLink.exe': {stivei}")
+    #
     status, outp = run_exe_file('streng_codec.exe')
     print(f"Status: {status}\nOutput: {outp}")
 

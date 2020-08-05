@@ -6,7 +6,6 @@ from quick import gui_it
 import click
 
 
-
 # JLink command-line for KL27Z target attach:
 JLINK_EXE_FILE = 'JLink.exe'
 # TODO: change in future to accomodate different devices??
@@ -315,45 +314,17 @@ def run_fw_verification(serial_num):
               help="Sensor FW: '1' = FW1, '2' = FW2, 'bl' = boot-loader, 'all' = bl + 1 + 2")
 @click.option('--erase/--no_erase', default=True, help="Erase entire Flash memory before programming")
 # The command itself:
-def run_irrigation_sensor_programming(**argvs):
-    """ Parse args and run bg-process(es) """
+def run_irrigation_sensor_programming(path, serial, fw_type,
+                                      erase, no_erase=False) -> bool:
+    """ IrrigationSensor Programmer V.1.0.3 """
+    #
     global srec_path
     #
-    print("Startup ...")
-    print(argvs.items())
-    try:
-        arg = "--path"
-        path = str(argvs.items()[arg])
-        arg = "--fw_type"
-        fw_type = str(argvs.items()[arg])
-        arg = "--serial"
-        serial = int(argvs.items()[arg])
-        try:
-            arg = "--erase"
-            erase = bool(argvs.items()[arg])
-        except KeyError:
-            arg = "--no_erase"
-            erase = bool(argvs.items()[arg])
-    except KeyError:
-        raise Exception(f"Invalid option: '{arg}'!")
-    #
-    """
-    arg_map = {'--path': path, '--fw_type': fw_type, '--serial': serial, '--erase': erase, '--no_erase': erase}
-    """
-    #
-    # Parse:
-    for k, v in argvs.items():
-        """
-        try:
-            arg_map[k] = v
-        except KeyError:
-            raise Exception(f"Invalid option {k}!")
-        """
-        print(f"{k} ({type(k)}) = {v}")
+    click.echo("Startup ...")
     # Run:
-    print(f"path={path}, fw_type={fw_type}, serial={serial}, erase={erase} ...")
+    click.echo(f"path={path}, fw_type={fw_type}, serial={serial}, erase={erase} ...")
     #
-    if path is None or fw_type is none or serial is None or erase is None:
+    if path is None or fw_type is None or serial is None or erase is None:
         raise Exception("Not all options specified!")
     elif fw_type not in ['all', '1', '2', 'bl']:
         raise Exception("Invalid value for FW-type argument!\nLegal values: '1', '2', 'bl', 'all' ")
@@ -361,19 +332,20 @@ def run_irrigation_sensor_programming(**argvs):
         raise Exception("No value given for serial number!\nLegal values: 1-65535")
     else:
         # Test only:
+        srec_path = path
         # ret_val = run_fw_programming(fw_type, serial_num, erase_flash_first, cleanup=False, debug=True)
         # Non-test environment:
         status1 = run_fw_programming(fw_type=fw_type, serial_num=serial, erase=erase)
         status2 = run_fw_verification(serial_num=serial)
         #
-        print("\r\n\r\n================================")
+        click.echo("\r\n\r\n================================")
         #
         total_status = status1 and status2
         if total_status:
-            print("PASS: successful programming.")
+            click.echo("PASS: successful programming.")
         else:
-            print("FAIL: programming error!!")
-        print("================================\r\n")
+            click.echo("FAIL: programming error!!")
+        click.echo("================================\r\n")
     #
     print("Completed FW-programming.")
     #
@@ -385,7 +357,7 @@ def run_irrigation_sensor_programming(**argvs):
 if __name__ == "__main__":
     gui_it(run_irrigation_sensor_programming,
            run_exit=False,
-           new_thread=True,
+           new_thread=False,
            output="gui",
            style="qdarkstyle",
            width=500)
