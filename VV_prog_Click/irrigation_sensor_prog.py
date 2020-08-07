@@ -2,9 +2,13 @@ import sys
 import os
 import subprocess
 # For (optional) GUI
-from quick import gui_it
 import click
+import quick_gui as quick
 
+
+VER_MAJOR = 1
+VER_MINOR = 0
+VER_SUBMINOR = 6     # Convert all process output to UTF-8 explicitly (can be turned off).
 
 # JLink command-line for KL27Z target attach:
 JLINK_EXE_FILE = 'JLink.exe'
@@ -27,7 +31,7 @@ use_gui = True
 srec_path = None
 
 
-def run_jlink_cmd_file(cmd_file_name, verbose=False):
+def run_jlink_cmd_file(cmd_file_name, verbose=True):
     SUBPROC_RETVAL_STATUS_SUCCESS = 0
     status = False
     #
@@ -60,7 +64,7 @@ def run_jlink_cmd_file(cmd_file_name, verbose=False):
 
 # ********************* Flash prog tasks **********************
 
-def fw_pre_task(erase=True, cleanup=True, debug=False):
+def fw_pre_task(erase=True, cleanup=True, verbose=True, debug=False):
     status = False
     #
     with open(PRE_TASKS_CMD_FILE, 'w') as fp:
@@ -82,7 +86,7 @@ def fw_pre_task(erase=True, cleanup=True, debug=False):
     return status
 
 
-def fw_bl_prog(security=False, cleanup=True, debug=False):
+def fw_bl_prog(security=False, cleanup=True, verbose=True, debug=False):
     global srec_path
     #
     status = False
@@ -106,7 +110,7 @@ def fw_bl_prog(security=False, cleanup=True, debug=False):
     return status
 
 
-def fw_app_prog(num=None, cleanup=True, debug=False):
+def fw_app_prog(num=None, cleanup=True, verbose=True, debug=False):
     global srec_path
     #
     status = False
@@ -139,7 +143,7 @@ def fw_app_prog(num=None, cleanup=True, debug=False):
     return status
 
 
-def fw_post_task(serNo=None, cleanup=True, debug=False):
+def fw_post_task(serNo=None, cleanup=True, verbose=True, debug=False):
     status = False
     #
     with open(POST_TASKS_CMD_FILE, 'w') as fp:
@@ -162,7 +166,11 @@ def fw_post_task(serNo=None, cleanup=True, debug=False):
 
 def run_fw_programming(fw_type, serial_num, erase=True, cleanup=True, debug=False):
     #
-    s1 = fw_pre_task(erase=erase, cleanup=cleanup, debug=debug)
+    s2 = False
+    s3 = False
+    s4 = False
+    #
+    s1 = fw_pre_task(erase=erase, cleanup=cleanup, debug=debug)    # Is ALWAYS used! ('s1' always gets assigned)
     if fw_type == 'bl' or fw_type == 'all':
         s2 = fw_bl_prog(cleanup=cleanup, debug=debug)
     if fw_type == '1' or fw_type == 'all':
@@ -178,7 +186,7 @@ def run_fw_programming(fw_type, serial_num, erase=True, cleanup=True, debug=Fals
 
 # ******************** FW verification ***********************************
 
-def fw_verify_imagenumber(img_num=1, cleanup=True, verbose=False):
+def fw_verify_imagenumber(img_num=1, cleanup=True, verbose=True):
     status = False
     IMAGE_NUM_FLASH_ADDR = "00005C00"
     #
@@ -195,13 +203,9 @@ def fw_verify_imagenumber(img_num=1, cleanup=True, verbose=False):
         except OSError:
             pass
     #
-    if verbose:
-        print("Cmd-output:", flush=True)
-        for txt in out_text:
-            print(txt)
-    #
     if cmd_status:
-        print("\r\nOutput analysis:", flush=True)
+        print("")
+        print("Output analysis:", flush=True)
         print("----------------", flush=True)
         for line in out_text:
             if line.startswith(IMAGE_NUM_FLASH_ADDR):
@@ -219,7 +223,7 @@ def fw_verify_imagenumber(img_num=1, cleanup=True, verbose=False):
     return status
 
 
-def fw_verify_serialnumber(snum, cleanup=True, verbose=False):
+def fw_verify_serialnumber(snum, cleanup=True, verbose=True):
     print("Running FW serial number verification ...", flush=True)
     status = False
     SER_NUM_FLASH_ADDR = "00005C08"
@@ -243,7 +247,8 @@ def fw_verify_serialnumber(snum, cleanup=True, verbose=False):
             print(txt)
     #
     if cmd_status:
-        print("\r\nOutput analysis:", flush=True)
+        print("")
+        print("Output analysis:", flush=True)
         print("----------------", flush=True)
         for line in out_text:
             if line.startswith(SER_NUM_FLASH_ADDR):
@@ -290,7 +295,9 @@ def run_fw_verification(serial_num):
     fw_dummy_task()
     #
     s1 = fw_verify_imagenumber()
-    print("\r\n\r\n")
+    print("")
+    print("")
+    print("")
     s2 = fw_verify_serialnumber(snum=serial_num)
     #
     status = s1 and s2
@@ -316,7 +323,7 @@ def run_fw_verification(serial_num):
 # The command itself:
 def run_irrigation_sensor_programming(path, serial, fw_type,
                                       erase, no_erase=False) -> bool:
-    """ IrrigationSensor Programmer V.1.0.3 """
+    """ IrrigationSensor Programmer ver.1.0.6 """
     #
     global srec_path
     #
@@ -338,14 +345,17 @@ def run_irrigation_sensor_programming(path, serial, fw_type,
         status1 = run_fw_programming(fw_type=fw_type, serial_num=serial, erase=erase)
         status2 = run_fw_verification(serial_num=serial)
         #
-        click.echo("\r\n\r\n================================")
+        print("")
+        print("")
+        print("================================")
         #
         total_status = status1 and status2
         if total_status:
-            click.echo("PASS: successful programming.")
+            print("PASS: successful programming.")
         else:
-            click.echo("FAIL: programming error!!")
-        click.echo("================================\r\n")
+            print("FAIL: programming error!!")
+        print("================================")
+        print("")
     #
     print("Completed FW-programming.")
     #
@@ -355,10 +365,15 @@ def run_irrigation_sensor_programming(path, serial, fw_type,
 # ***************** MAIN ************************
 
 if __name__ == "__main__":
-    gui_it(run_irrigation_sensor_programming,
+    prog_func = run_irrigation_sensor_programming
+    prog_func.__setattr__("name", f"Irrigation sensor programmer GUI ver.{VER_MAJOR}.{VER_MINOR}.{VER_SUBMINOR}")
+    quick.gui_it(prog_func,
            run_exit=False,
            new_thread=False,
-           output="gui",
            style="qdarkstyle",
-           width=500)
+           output="gui",
+           width=650,
+           height=300,
+           left=100,
+           top=100)
 
