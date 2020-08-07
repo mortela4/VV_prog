@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import sys
 import os
 import argparse
@@ -8,7 +10,7 @@ from gooey import Gooey, GooeyParser
 
 VER_MAJOR = 1
 VER_MINOR = 0
-VER_SUBMINOR = 4     # Handle all encodings of terminal output text, and create absolute path from relative.
+VER_SUBMINOR = 6     # Convert all process output to UTF-8 explicitly (can be turned off).
 
 # JLink command-line for KL27Z target attach:
 JLINK_EXE_FILE = 'JLink.exe'
@@ -37,7 +39,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
-def run_jlink_cmd_file(cmd_file_name, verbose=False):
+def run_jlink_cmd_file(cmd_file_name: str, utf_encode: bool = True, verbose: bool = False):
     SUBPROC_RETVAL_STATUS_SUCCESS = 0
     status = False
     #
@@ -48,14 +50,19 @@ def run_jlink_cmd_file(cmd_file_name, verbose=False):
     #
     print("Running: " + str(cmd_with_args))
     try:
-        p1 = subprocess.Popen(cmd_with_args, stdout=subprocess.PIPE)
+        p1 = subprocess.Popen(cmd_with_args, shell=False)   # stdout=subprocess.PIPE is NOT used here (non-buffered)
         # Run the command
-        output = p1.communicate(timeout=30)[0]
+        output, err_out = p1.communicate(timeout=30)
     except subprocess.TimeoutExpired:
         print("ERROR: timeout from running J-Link!")
         return status
-
-    lines = output.splitlines()
+    # Collect all output (both STDOUT and STDERR) and split into lines:
+    lines = []
+    if output:
+        lines = output.splitlines()
+    if err_out:
+        lines.append(err_out.splitlines())
+    # Format output into list of strings:
     lines_out = []
     for line in lines:
         try:
@@ -72,7 +79,12 @@ def run_jlink_cmd_file(cmd_file_name, verbose=False):
                     except UnicodeDecodeError:
                         line_str = "..."    # Giving up - inserting something 'well-formed' instead ...
         finally:
-            lines_out.append(line_str)
+            if utf_encode:
+                # Ensure output data is UTF-8:
+                line_out = line_str.encode('utf-8')  # Returns a byte-array!
+            else:
+                line_out = line_str     # Returns a string! (decoded FROM format above - ASCII, UTF8 or LATIN1 - TO local format)
+            lines_out.append(line_out)
         if verbose:
             print(line_str)
 
@@ -280,7 +292,7 @@ def fw_verify_serialnumber(snum, cleanup=True, verbose=False):
                     else:
                         print("ERROR: Readback-value=%s is NOT equal to given serial number(=snum)." % val)
                 except ValueError:
-                    print("%s is not a valid HEX-string!")    #
+                    print("%s is not a valid HEX-string!")
     return status
 
 
@@ -300,7 +312,7 @@ def fw_dummy_task(cleanup=True, debug=False, verbose=True):
     # Remove file if specified:
     if cleanup:
         try:
-            os.remove(POST_TASKS_CMD_FILE)
+            os.remove(DUMMY_TASKS_CMD_FILE)
         except OSError:
             pass
     #
@@ -391,7 +403,7 @@ def parse_args_and_execute():
     print("Completed FW-programming.")
 
 
-@Gooey(advanced=True)
+@Gooey(advanced=True, encoding='utf-8', default_size=(500, 650), program_name=f"VV-programmer GUI ver.{VER_MAJOR}.{VER_MINOR}.{VER_SUBMINOR}")
 def gui_wrapper():
     parse_args_and_execute()
 
