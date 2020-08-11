@@ -4,6 +4,7 @@ import subprocess
 # For (optional) GUI
 import click
 import quick_gui as quick
+from resource_helper import resource_path
 
 
 VER_MAJOR = 1
@@ -36,13 +37,13 @@ def run_jlink_cmd_file(cmd_file_name, verbose=True):
     status = False
     #
     cmd_with_args = []
-    cmd_with_args.append(JLINK_EXE_FILE)
+    cmd_with_args.append(resource_path(JLINK_EXE_FILE))
     cmd_with_args.extend(JLINK_TARGET_OPTIONS)
     cmd_with_args.append(cmd_file_name)
     #
     print("Running: " + str(cmd_with_args))
     try:
-        p1 = subprocess.Popen(cmd_with_args, stdout=subprocess.PIPE)
+        p1 = subprocess.Popen(cmd_with_args, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # Run the command
         output = p1.communicate(timeout=30)[0]
     except subprocess.TimeoutExpired:

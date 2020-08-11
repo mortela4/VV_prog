@@ -3,6 +3,8 @@ import os
 from functools import partial
 import math
 
+from resource_helper import resource_path
+
 import click
 
 from PyQt5 import QtGui
@@ -14,9 +16,9 @@ try:
 except ModuleNotFoundError:
     _has_qdarkstyle = False
 
-
 _GTypeRole = QtCore.Qt.UserRole
 _missing = object()
+
 
 class GStyle(object):
     _base_style = """
@@ -673,6 +675,7 @@ class OutputEdit(QtWidgets.QTextEdit):
         self.resize(600, 600)  # stand-alone window, so no need to check parent geometry etc.
 
 
+# Top-level PyQt5 application entry point:
 class App(QtWidgets.QWidget):
     def __init__(self, func, run_exit, new_thread, output='gui', left=10, top=10,
             width=400, height=140):
@@ -787,9 +790,19 @@ def gui_it(click_func, style="qdarkstyle", **argvs)->None:
     global _gstyle
     _gstyle = GStyle(style)
     # Need to ensure plugins work on systems w. no Qt5 installed:
-    os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = "."
+    # os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = "."     # Or rather: 'resource_path(".")' ???
+    # app_path = os.path.abspath(__file__)
+    app_path = resource_path(".")
+    app_plugin_path = os.path.join(app_path, "plugins")
+    os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = app_path
+    # QtWidgets.QApplication.addLibraryPath(os.path.join(pyqt, "plugins"))
     app = QtWidgets.QApplication(sys.argv)
-
+    # app_path = app.applicationDirPath()      # Won't work! Points to local 'python.exe' ... :-(
+    app.addLibraryPath(app_path)
+    app.addLibraryPath(app_plugin_path)
+    print(f"Using '{app_plugin_path}"' as plugin PATH ...')
+    print(app.libraryPaths())   # For DEBUG only!
+    print(f"Running application '{app_path}' ...")
     app.setStyleSheet(_gstyle.stylesheet)
 
     # set the default value for argvs
@@ -800,7 +813,7 @@ def gui_it(click_func, style="qdarkstyle", **argvs)->None:
     sys.exit(app.exec_())
 
 
-def gui_option(f:click.core.BaseCommand)->click.core.BaseCommand:
+def gui_option(f:click.core.BaseCommand) -> click.core.BaseCommand:
     """decorator for adding '--gui' option to command"""
     # TODO: add run_exit, new_thread
     def run_gui_it(ctx, param, value):

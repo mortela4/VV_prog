@@ -1,29 +1,33 @@
-import gooey
+# -*- mode: python ; coding: utf-8 -*-
 
-gooey_root = os.path.dirname(gooey.__file__)
-gooey_languages = Tree(os.path.join(gooey_root, 'languages'), prefix = 'gooey/languages')
-gooey_images = Tree(os.path.join(gooey_root, 'images'), prefix = 'gooey/images')
+block_cipher = None
+
 
 a = Analysis(['VV_prog_GUI.py'],
-             pathex=['C:\\Users\\MortenL\\Anaconda3\\Scripts'],
+             pathex=['P:\\MortenL\\proj_info\\VannVogn\\firm_ware\\VV_flash_prog_proj\\VV_prog\\VV_prog_GUI'],
+             binaries=[('JLink.exe', '.'), ('JLinkARM.dll', '.')],
+             datas=[],
              hiddenimports=[],
-             hookspath=None,
-             runtime_hooks=None,
-             )
-pyz = PYZ(a.pure)
-
-options = [('u', None, 'OPTION')]
-
+             hookspath=[],
+             runtime_hooks=[],
+             excludes=[],
+             win_no_prefer_redirects=False,
+             win_private_assemblies=False,
+             cipher=block_cipher,
+             noarchive=False)
+pyz = PYZ(a.pure, a.zipped_data,
+             cipher=block_cipher)
 exe = EXE(pyz,
           a.scripts,
           a.binaries,
           a.zipfiles,
           a.datas,
-          options,
-          gooey_languages, # Add them in to collected files
-          gooey_images, # Same here.
-          name='VV-Prog',
+          [],
+          name='VV_prog_GUI',
           debug=False,
-          strip=None,
-          upx=True,
-          console=False)
+          bootloader_ignore_signals=False,
+          strip=False,
+          upx=False,
+          upx_exclude=[],
+          runtime_tmpdir=None,
+          console=False )
