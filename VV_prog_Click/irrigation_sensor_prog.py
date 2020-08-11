@@ -43,7 +43,11 @@ def run_jlink_cmd_file(cmd_file_name, verbose=True):
     #
     print("Running: " + str(cmd_with_args))
     try:
-        p1 = subprocess.Popen(cmd_with_args, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p1 = subprocess.Popen(cmd_with_args,
+                              shell=False,
+                              stdin=subprocess.DEVNULL,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE)
         # Run the command
         output = p1.communicate(timeout=30)[0]
     except subprocess.TimeoutExpired:
@@ -207,7 +211,7 @@ def fw_verify_imagenumber(img_num=1, cleanup=True, verbose=True):
     if cmd_status:
         print("")
         print("Output analysis:", flush=True)
-        print("----------------", flush=True)
+        print("---------------------", flush=True)
         for line in out_text:
             if line.startswith(IMAGE_NUM_FLASH_ADDR):
                 addr_content = line.split('=')[-1]      # First field is address, last field is value
@@ -250,7 +254,7 @@ def fw_verify_serialnumber(snum, cleanup=True, verbose=True):
     if cmd_status:
         print("")
         print("Output analysis:", flush=True)
-        print("----------------", flush=True)
+        print("---------------------", flush=True)
         for line in out_text:
             if line.startswith(SER_NUM_FLASH_ADDR):
                 addr_content = line.split('=')[-1]      # First field is address, last field is value
@@ -283,7 +287,7 @@ def fw_dummy_task(cleanup=True, debug=False, verbose=True):
     # Remove file if specified:
     if cleanup:
         try:
-            os.remove(POST_TASKS_CMD_FILE)
+            os.remove(DUMMY_TASKS_CMD_FILE)
         except OSError:
             pass
     #
@@ -317,7 +321,7 @@ def run_fw_verification(serial_num):
 @click.option("--path", type=click.Path(file_okay=False, dir_okay=True), help="SREC directory", default=".")
 @click.option("--serial", type=int, help="Sensor serial number")
 @click.option("--fw_type",
-              type=click.Choice(['1', '2', 'bl', 'all'], ),
+              type=click.Choice(['all', '1', '2', 'bl']),
               default='all',
               help="Sensor FW: '1' = FW1, '2' = FW2, 'bl' = boot-loader, 'all' = bl + 1 + 2")
 @click.option('--erase/--no_erase', default=True, help="Erase entire Flash memory before programming")
