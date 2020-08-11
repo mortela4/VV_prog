@@ -350,11 +350,16 @@ def run_irrigation_sensor_programming(path, serial, fw_type,
         status1 = run_fw_programming(fw_type=fw_type, serial_num=serial, erase=erase)
         status2 = run_fw_verification(serial_num=serial)
         #
+        total_status = status1 and status2
+        if total_status:
+            quick.set_app_status(status='success')
+        else:
+            quick.set_app_status(status='error')
+        #
         print("")
         print("")
         print("================================")
         #
-        total_status = status1 and status2
         if total_status:
             print("PASS: successful programming.")
         else:
