@@ -561,6 +561,8 @@ class _InputSpinBox(QtWidgets.QSpinBox):
     pass
 
 class CommandLayout(QtWidgets.QGridLayout):
+    status_out = None
+
     def __init__(self, func, run_exit, parent_layout=None):
         super(CommandLayout, self).__init__()
         self.parent_layout = parent_layout
@@ -573,7 +575,6 @@ class CommandLayout(QtWidgets.QGridLayout):
             frame = _Spliter()
             self.addWidget(frame, 1, 0, 1, 2)
         self.params_func, self.widgets = self.append_opts(self.func.params)
-
 
     def add_sysargv(self):
         if hasattr(self.parent_layout, "add_sysargv"):
@@ -622,7 +623,12 @@ class CommandLayout(QtWidgets.QGridLayout):
             cmd_layout.addWidget(button, 0, col)
         self.addLayout(cmd_layout, row, 0, 1, 2)
 
-    def status_indicator(self):
+    @QtCore.pyqtSlot()
+    def clean_sysargv(self):
+        sys.argv = []
+
+    def add_status_indicator(self):
+        # Add status indicator:
         comp_layout = QtWidgets.QVBoxLayout()
         comp_layout.setSpacing(50)
         # Placeholder:
@@ -646,25 +652,13 @@ class CommandLayout(QtWidgets.QGridLayout):
         status_layout = QtWidgets.QHBoxLayout()
         status_label = QtWidgets.QLabel(text="Status:")
         status_layout.addWidget(status_label)
-        status_out = QtWidgets.QLineEdit("Waiting for process output ...")
-        status_out.setAccessibleName("status-indicator")
-        status_out.setStyleSheet("QLineEdit {background-color: rgb(255, 255, 0)}")
-        status_layout.addWidget(status_out)
+        self.status_out = QtWidgets.QLineEdit("Waiting for process output ...")
+        self.status_out.setAccessibleName("status-indicator")
+        self.status_out.setStyleSheet("QLineEdit {background-color: rgb(255, 255, 0)}")
+        status_layout.addWidget(self.status_out)
         self.addLayout(status_layout, self.rowCount() + 1, 1)
 
-    @QtCore.pyqtSlot()
-    def update_status(self, status: str):
-        statusind = self.findChild(QtWidgets.QLineEdit, "status-indicator")
-        if status == "success":
-            statusind.value = "PASS"
-            statusind.setStyleSheet("QLineEdit {background-color: rgb(0, 255, 0)}")
-        else:
-            statusind.value = "FAIL"
-            statusind.setStyleSheet("QLineEdit {background-color: rgb(255, 0, 0)}")
 
-    @QtCore.pyqtSlot()
-    def clean_sysargv(self):
-        sys.argv = []
 
 class RunCommand(QtCore.QRunnable):
     def __init__(self, func, run_exit):
@@ -722,10 +716,8 @@ class GuiStream(QtCore.QObject):
 
 
 class OutputEdit(QtWidgets.QTextEdit):
-    app_status = 'unknown'
-    app_status_indication = QtCore.pyqtSignal(str)
 
-    def print(self, text, debug: bool = True):
+    def print(self, text, debug: bool = False):
         if debug:
             lines = str(text).splitlines()
             for line in lines:
@@ -738,24 +730,13 @@ class OutputEdit(QtWidgets.QTextEdit):
         self.setTextCursor(cursor)
         self.ensureCursorVisible()
         self.resize(600, 600)  # stand-alone window, so no need to check parent geometry etc.
-        # Check if status updated:
-        new_app_status = get_app_status()
-        if new_app_status != self.app_status:
-            self.app_status = new_app_status
-            # Colorize depending on status of executed command:
-            if self.app_status == 'success':
-                self.setStyleSheet("QTextEdit {background-color: rgb(0, 255, 0)}")
-            elif self.app_status == 'error':
-                self.setStyleSheet("QTextEdit {background-color: rgb(255, 0, 0)}")
-            else:
-                self.setStyleSheet("QTextEdit {background-color: rgb(255, 255, 0)}")
-            self.update()
-            # Update main window GUI:
-            self.app_status_indication.emit(self.app_status)
 
 
 # Top-level PyQt5 application entry point:
 class App(QtWidgets.QWidget):
+    app_status = 'unknown'
+    app_status_indication = QtCore.pyqtSignal(str)
+
     def __init__(self, func, run_exit, new_thread, output='gui', left=10, top=10,
             width=400, height=140):
         """
@@ -772,11 +753,12 @@ class App(QtWidgets.QWidget):
         self.initUI(run_exit, QtCore.QRect(left, top, width, height))
         self.threadpool = QtCore.QThreadPool()
         self.outputEdit = self.initOutput(output)
-
+        self.app_status_indication.connect(self.update_status_indicator)
 
     def initOutput(self, output):
         if output == 'gui':
-            sys.stdout = GuiStream()
+            out_stream = GuiStream()
+            sys.stdout = out_stream
             sys.stderr = sys.stdout
             text = OutputEdit()
             text.setReadOnly(True)
@@ -785,11 +767,11 @@ class App(QtWidgets.QWidget):
             # text.adjustSize() --> no funczione (no auto-resize) ...
             # sys.stdout.textWritten.connect(text.append)
             # text.show()
+            # self.out_stream.app_status_indication.connect(self.update_status_indicator)
 
             return text
         else:
             return None
-
 
     def initCommandUI(self, func, run_exit, parent_layout=None):
         opt_set = CommandLayout(func, run_exit, parent_layout=parent_layout)
@@ -825,7 +807,9 @@ class App(QtWidgets.QWidget):
                         },
                     ]
                     )
-            opt_set.status_indicator()
+        #
+        opt_set.add_status_indicator()
+        #
         return opt_set
 
     def initUI(self, run_exit, geometry):
@@ -837,6 +821,15 @@ class App(QtWidgets.QWidget):
         self.setLayout(self.opt_set)
         self.show()
 
+    @QtCore.pyqtSlot()
+    def update_status_indicator(self, status: str):
+        # statusind = self.opt_set.findChild(QtWidgets.QLineEdit, "status-indicator")
+        if status == "success":
+            self.opt_set.status_out.setText("PASS")
+            self.opt_set.status_out.setStyleSheet("QLineEdit {background-color: rgb(0, 255, 0)}")
+        else:
+            self.opt_set.status_out.setText("FAIL!")
+            self.opt_set.status_out.setStyleSheet("QLineEdit {background-color: rgb(255, 0, 0)}")
 
     @QtCore.pyqtSlot()
     def copy_cmd(self):
@@ -860,7 +853,15 @@ class App(QtWidgets.QWidget):
             self.threadpool.start(runcmd)
         else:
             runcmd.run()
+        # Check if status updated:
+        new_app_status = get_app_status()
+        if new_app_status != self.app_status:
+            self.app_status = new_app_status
+            # self.app_status_indication.emit(self.app_status)
+            self.update_status_indicator(self.app_status)
 
+
+# Make CLI app into GUI app:
 
 def gui_it(click_func, style="qdarkstyle", **argvs)->None:
     """
