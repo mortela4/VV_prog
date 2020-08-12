@@ -180,9 +180,9 @@ def fw_post_task(serNo=None, cleanup=True, verbose=True, debug=False):
 
 def run_fw_programming(fw_type, serial_num, erase=True, cleanup=True, debug=False):
     #
-    s2 = False
-    s3 = False
-    s4 = False
+    s2 = True
+    s3 = True
+    s4 = True
     #
     s1 = fw_pre_task(erase=erase, cleanup=cleanup, debug=debug)    # Is ALWAYS used! ('s1' always gets assigned)
     if fw_type == 'bl' or fw_type == 'all':
