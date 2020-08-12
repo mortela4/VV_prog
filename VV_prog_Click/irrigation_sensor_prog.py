@@ -73,6 +73,7 @@ def fw_pre_task(erase=True, cleanup=True, verbose=True, debug=False):
     status = False
     #
     with open(PRE_TASKS_CMD_FILE, 'w') as fp:
+        fp.write("halt\n")
         fp.write("r\n")
         if erase:
             fp.write("unlock Kinetis\n")      # Needed if device is programmed 1st time!
@@ -96,21 +97,25 @@ def fw_bl_prog(security=False, cleanup=True, verbose=True, debug=False):
     #
     status = False
     #
-    bootloader_srec = srec_path + "\\" + "IrrigationSensorBootld.srec"
-    #
-    with open(BL_TASKS_CMD_FILE, 'w') as fp:
-        fp.write("r\n")
-        fp.write("loadfile %s\n" % bootloader_srec)
-        fp.write("q\n")
-    # Run JLink w. file input:
-    if not debug:
-        status, out_text = run_jlink_cmd_file(BL_TASKS_CMD_FILE)
-    # Remove file if specified:
-    if cleanup:
-        try:
-            os.remove(BL_TASKS_CMD_FILE)
-        except OSError:
-            pass
+    bootloader_srec = os.path.join(srec_path, "IrrigationSensorBootld.srec")
+    if not os.path.exists(bootloader_srec):
+        print(f"Could not write bootloader to Flash memory - SREC file '{bootloader_srec}' missing!", flush=True)
+    else:
+        print(f"Writing bootloader firmware '{bootloader_srec}' to boot Flash memory ...", flush=True)
+        with open(BL_TASKS_CMD_FILE, 'w') as fp:
+            fp.write("halt\n")
+            fp.write("r\n")
+            fp.write("loadfile %s\n" % bootloader_srec)
+            fp.write("q\n")
+        # Run JLink w. file input:
+        if not debug:
+            status, out_text = run_jlink_cmd_file(BL_TASKS_CMD_FILE)
+        # Remove file if specified:
+        if cleanup:
+            try:
+                os.remove(BL_TASKS_CMD_FILE)
+            except OSError:
+                pass
     #
     return status
 
@@ -121,29 +126,33 @@ def fw_app_prog(num=None, cleanup=True, verbose=True, debug=False):
     status = False
     if num == 1:
         file_name = FW1_TASKS_CMD_FILE
-        fw_name = "IrrigationSensorAppl_FW1.srec"
+        fw_srec_name = "IrrigationSensorAppl_FW1.srec"
     elif num == 2:
         file_name = FW2_TASKS_CMD_FILE
-        fw_name = "IrrigationSensorAppl_FW2.srec"
+        fw_srec_name = "IrrigationSensorAppl_FW2.srec"
     else:
         print("ERROR: must specify FW-number as 1 or 2!")
         return False
     # Add cmds:
-    fw_name = srec_path + "\\" + fw_name
-    #
-    with open(file_name, 'w') as fp:
-        fp.write("r\n")
-        fp.write("loadfile " + fw_name + "\n")
-        fp.write("q\n")
-    # Run JLink w. file input:
-    if not debug:
-        status, out_text = run_jlink_cmd_file(file_name)
-    # Remove file if specified:
-    if cleanup:
-        try:
-            os.remove(file_name)
-        except OSError:
-            pass
+    fw_name = os.path.join(srec_path, fw_srec_name)
+    if not os.path.exists(fw_name):
+        print(f"Could not write firmware no.{num} to Flash memory - SREC file '{fw_name}' missing!", flush=True)
+    else:
+        print(f"Writing firmware no.{num} ('{fw_name}') to main Flash memory ...", flush=True)
+        with open(file_name, 'w') as fp:
+            fp.write("halt\n")
+            fp.write("r\n")
+            fp.write("loadfile " + fw_name + "\n")
+            fp.write("q\n")
+        # Run JLink w. file input:
+        if not debug:
+            status, out_text = run_jlink_cmd_file(file_name)
+        # Remove file if specified:
+        if cleanup:
+            try:
+                os.remove(file_name)
+            except OSError:
+                pass
     #
     return status
 
