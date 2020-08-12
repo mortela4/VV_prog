@@ -659,7 +659,6 @@ class CommandLayout(QtWidgets.QGridLayout):
         self.addLayout(status_layout, self.rowCount() + 1, 1)
 
 
-
 class RunCommand(QtCore.QRunnable):
     def __init__(self, func, run_exit):
         super(RunCommand, self).__init__()
@@ -684,6 +683,7 @@ class RunCommand(QtCore.QRunnable):
             msg.exec_()
         # if self.outputEdit is not None:
             # self.outputEdit.show()
+
 
 class GCommand(click.Command):
     def __init__(self, new_thread=True, *arg, **args):
@@ -753,7 +753,6 @@ class App(QtWidgets.QWidget):
         self.initUI(run_exit, QtCore.QRect(left, top, width, height))
         self.threadpool = QtCore.QThreadPool()
         self.outputEdit = self.initOutput(output)
-        self.app_status_indication.connect(self.update_status_indicator)
 
     def initOutput(self, output):
         if output == 'gui':
@@ -761,14 +760,10 @@ class App(QtWidgets.QWidget):
             sys.stdout = out_stream
             sys.stderr = sys.stdout
             text = OutputEdit()
+            text.setWindowTitle('Irrigation Sensor programming output')
             text.setReadOnly(True)
             sys.stdout.textWritten.connect(text.print)
             sys.stdout.textWritten.connect(text.show)
-            # text.adjustSize() --> no funczione (no auto-resize) ...
-            # sys.stdout.textWritten.connect(text.append)
-            # text.show()
-            # self.out_stream.app_status_indication.connect(self.update_status_indicator)
-
             return text
         else:
             return None
@@ -823,7 +818,6 @@ class App(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot()
     def update_status_indicator(self, status: str):
-        # statusind = self.opt_set.findChild(QtWidgets.QLineEdit, "status-indicator")
         if status == "success":
             self.opt_set.status_out.setText("PASS")
             self.opt_set.status_out.setStyleSheet("QLineEdit {background-color: rgb(0, 255, 0)}")
@@ -857,7 +851,6 @@ class App(QtWidgets.QWidget):
         new_app_status = get_app_status()
         if new_app_status != self.app_status:
             self.app_status = new_app_status
-            # self.app_status_indication.emit(self.app_status)
             self.update_status_indicator(self.app_status)
 
 
