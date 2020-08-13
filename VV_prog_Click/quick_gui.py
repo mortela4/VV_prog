@@ -598,9 +598,17 @@ class CommandLayout(QtWidgets.QGridLayout):
             self.setRowStretch(i, 5)
         return params_func, widgets
 
-    def generate_cmd_button(self, label, cmd_slot, tooltip=""):
+    def generate_cmd_button(self, label, cmd_slot, tooltip: str = "", icon_name: str = ""):
         button = QtWidgets.QPushButton(label)
         button.setToolTip(tooltip)
+        if icon_name != "":
+            if icon_name.startswith('SP_'):
+                button.setIcon(button.style().standardIcon(getattr(QtWidgets.QStyle, icon_name)))
+            else:
+                try:
+                    button.setIcon(QtGui.QIcon(resource_path(icon_name)))
+                except Exception:
+                    pass
         button.clicked.connect(self.clean_sysargv)
         button.clicked.connect(self.add_sysargv)
         button.clicked.connect(cmd_slot)
@@ -633,12 +641,6 @@ class CommandLayout(QtWidgets.QGridLayout):
         comp_layout.setSpacing(50)
         # Placeholder:
         hline2 = QtWidgets.QFrame()
-        """
-        hline2.setMinimumWidth(1)
-        hline2.setFixedHeight(20)
-        hline2.setFrameShape(QtWidgets.QFrame.HLine)
-        hline2.setFrameShadow(QtWidgets.QFrame.Sunken)
-        """
         comp_layout.addWidget(hline2)
         # Horizontal line:
         hline1 = QtWidgets.QFrame()
@@ -786,19 +788,22 @@ class App(QtWidgets.QWidget):
             opt_set.add_cmd_buttons( args=
                     [
                         {
-                            'label':'&Run',
+                            'label': '&Run',
                             'cmd_slot': partial(self.run_cmd, new_thread=new_thread),
-                            "tooltip":"run command"
+                            "tooltip": "run command",
+                            'icon_name': "SP_MediaPlay",
                         },
                         {
-                            'label':'&Copy',
+                            'label':'&Copy Cmd',
                             'cmd_slot': self.copy_cmd,
-                            "tooltip":"copy command to clipboard"
+                            "tooltip": "copy command to clipboard",
+                            'icon_name': "copy.png",
                         },
                         {
                             'label': '&Exit',
                             'cmd_slot': self.exit_cmd,
-                            "tooltip": "Quit application"
+                            "tooltip": "Quit application",
+                            'icon_name': "SP_DialogCloseButton",
                         },
                     ]
                     )

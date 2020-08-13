@@ -8,8 +8,8 @@ from resource_helper import resource_path
 
 
 VER_MAJOR = 1
-VER_MINOR = 0
-VER_SUBMINOR = 6     # Convert all process output to UTF-8 explicitly (can be turned off).
+VER_MINOR = 1       # Modified GUI look and feel (icons on buttons etc.).
+VER_SUBMINOR = 0
 
 # JLink command-line for KL27Z target attach:
 JLINK_EXE_FILE = 'JLink.exe'
@@ -337,7 +337,7 @@ def run_fw_verification(serial_num):
 # The command itself:
 def run_irrigation_sensor_programming(path, serial, fw_type,
                                       erase, no_erase=False) -> bool:
-    """ IrrigationSensor Programmer ver.1.0.6 """
+    """ IrrigationSensor Programming Tool """
     #
     global srec_path
     #
