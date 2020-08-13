@@ -7,15 +7,17 @@ import quick_gui as quick
 from resource_helper import resource_path
 
 
+# Version info
+# ============
 VER_MAJOR = 1
 VER_MINOR = 2       # Process output window is now part of main window.
-VER_SUBMINOR = 0
+VER_SUBMINOR = 1    # Fix: 'serial' argument has now 'count'-attribute(=True) --> removed 'type' attribute (yields spinbox in GUI)
 
 # JLink command-line for KL27Z target attach:
 JLINK_EXE_FILE = 'JLink.exe'
 # TODO: change in future to accomodate different devices??
 JLINK_TARGET_OPTIONS = ['-device', 'MKL27Z256XXX4', '-if', 'SWD', '-speed', '4000', '-autoconnect', '1']
-# File names:
+# (temporary) file names:
 PRE_TASKS_CMD_FILE = "VV_pre_tasks.tmp.jlink"
 BL_TASKS_CMD_FILE = "VV_bl_tasks.tmp.jlink"
 FW1_TASKS_CMD_FILE = "VV_fw1_prog.tmp.jlink"
@@ -327,8 +329,13 @@ def run_fw_verification(serial_num):
 
 # ------------------------------ Click setup -------------------------------
 @click.command()
-@click.option("--path", type=click.Path(file_okay=False, dir_okay=True), help="SREC directory", default=".")
-@click.option("--serial", type=int, help="Sensor serial number")
+@click.option("--path",
+              type=click.Path(file_okay=False, dir_okay=True),
+              help="Path to folder containing *.SREC programming files",
+              default=".")
+@click.option("--serial",
+              count=True,
+              help="Sensor serial number")
 @click.option("--fw_type",
               type=click.Choice(['all', '1', '2', 'bl']),
               default='all',

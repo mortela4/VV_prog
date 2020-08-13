@@ -229,15 +229,28 @@ class GStringLineEditor(click.types.StringParamType):
         return [generate_label(opt), value], to_command
 
 
-class GIntLineEditor(GStringLineEditor):
+class GIntInputEditor(click.types.StringParamType):
+    def to_widget(self, opt, validator=None):
+        value = _InputIntegerEdit()
+        #value.setOption(QtWidgets.QInputDialog)
+        if opt.default:
+            value.setValue(int(opt.default))
+        # value.setValidator(validator) --> validation not used like this for INT-dedicated dialog!
+
+        def to_command():
+            return [opt.opts[0], value.getInt()]      # No usage of this??
+        return [generate_label(opt), value], to_command
+
+
+class GIntLineEditor(GIntInputEditor):
     def to_widget(self, opt):
-        return GStringLineEditor.to_widget(self, opt,
-                validator=QtGui.QIntValidator())
+        return GIntInputEditor.to_widget(self, opt, validator=QtGui.QIntValidator())
+
 
 class GFloatLineEditor(GStringLineEditor):
     def to_widget(self, opt):
-        return GStringLineEditor.to_widget(self, opt,
-                validator=QtGui.QDoubleValidator())
+        return GStringLineEditor.to_widget(self, opt, validator=QtGui.QDoubleValidator())
+
 
 class GFileDialog(QtWidgets.QFileDialog):
     def __init__(self, *args, exists = False, file_okay = True, dir_okay= True,  **kwargs):
@@ -396,6 +409,7 @@ class GIntRangeSlider(click.types.IntRange):
             return [opt.opts[0], str(value.value())]
         return [generate_label(opt), value], to_command
 
+
 class GIntRangeLineEditor(click.types.IntRange):
     def to_widget(self, opt):
         value = QtWidgets.QLineEdit()
@@ -404,6 +418,7 @@ class GIntRangeLineEditor(click.types.IntRange):
         def to_command():
             return [opt.opts[0], value.text()]
         return [generate_label(opt), value], to_command
+
 
 def bool_flag_option(opt):
     checkbox = _InputCheckBox(opt.name)
@@ -419,6 +434,7 @@ def bool_flag_option(opt):
             return opt.secondary_opts
     return [checkbox], to_command
 
+
 class GChoiceComboBox(click.types.Choice):
     def to_widget(self, opt):
         cb = _InputComboBox()
@@ -428,12 +444,14 @@ class GChoiceComboBox(click.types.Choice):
             return [opt.opts[0], cb.currentText()]
         return [generate_label(opt), cb], to_command
 
+
 def count_option(opt):
     sb = _InputSpinBox()
 
     def to_command():
         return [opt.opts[0]] * int(sb.text())
     return [generate_label(opt), sb], to_command
+
 
 class GTupleGListView(click.Tuple):
     def to_widget(self, opt):
@@ -460,6 +478,7 @@ def multi_text_arguement(opt):
     # return [QtWidgets.QLabel(opt.name), value], to_command
     return [_OptionLabel(opt.name), value], to_command
 
+
 def select_type_validator(tp: click.types.ParamType)-> QtGui.QValidator:
     """ select the right validator for `tp`"""
     if isinstance(tp, click.types.IntParamType):
@@ -472,6 +491,7 @@ def select_type_validator(tp: click.types.ParamType)-> QtGui.QValidator:
 def select_opt_validator(opt):
     """ select the right validator for `opt`"""
     return select_type_validator(opt.type)
+
 
 def opt_to_widget(opt):
     if opt.nargs > 1 :
@@ -486,7 +506,7 @@ def opt_to_widget(opt):
         return GPathGLindEidt_path.to_widget(opt.type, opt)
     elif isinstance(opt.type, click.types.IntRange):
         return GIntRangeGSlider.to_widget(opt.type, opt)
-    elif isinstance(opt.type, click.types.IntParamType):
+    elif isinstance(opt.type, click.types.IntParamType):                       # NOT 'click.INT'!!
         return GIntLineEditor.to_widget(opt.type, opt)
     elif isinstance(opt.type, click.types.FloatParamType):
         return GFloatLineEditor.to_widget(opt.type, opt)
@@ -494,7 +514,7 @@ def opt_to_widget(opt):
         return GStringLineEditor.to_widget(opt.type, opt)
 
 def _to_widget(opt):
-    #customed widget
+    # customized widget
     if isinstance(opt.type, click.types.FuncParamType):
         if hasattr(opt.type.func, 'to_widget'):
             return opt.type.func.to_widget()
@@ -552,6 +572,9 @@ class _OptionLabel(QtWidgets.QLabel):
     pass
 
 class _InputLineEdit(QtWidgets.QLineEdit):
+    pass
+
+class _InputIntegerEdit(QtWidgets.QInputDialog):
     pass
 
 class _InputCheckBox(QtWidgets.QCheckBox):
