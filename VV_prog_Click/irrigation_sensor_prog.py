@@ -11,7 +11,7 @@ from resource_helper import resource_path
 # ============
 VER_MAJOR = 1
 VER_MINOR = 3       # J-Link commander console windows are now hidden (J-Link GUI dialogs and popups are still shown).
-VER_SUBMINOR = 0
+VER_SUBMINOR = 1    # Removed function comment header to remove heading in main-window GUI.
 
 # JLink command-line for KL27Z target attach:
 JLINK_EXE_FILE = 'JLink.exe'
@@ -349,7 +349,7 @@ def run_fw_verification(serial_num):
 # The command itself:
 def run_irrigation_sensor_programming(path, serial, fw_type,
                                       erase, no_erase=False) -> bool:
-    """ IrrigationSensor Programming Tool """
+    # NOTE: no doc-block here to avoid Quick picking it up and use for window title!
     #
     global srec_path
     #
@@ -397,7 +397,7 @@ def run_irrigation_sensor_programming(path, serial, fw_type,
 
 if __name__ == "__main__":
     prog_func = run_irrigation_sensor_programming
-    prog_func.__setattr__("name", f"Irrigation sensor programmer GUI ver.{VER_MAJOR}.{VER_MINOR}.{VER_SUBMINOR}")
+    prog_func.__setattr__("name", f"Irrigation Sensor Programming Tool ver.{VER_MAJOR}.{VER_MINOR}.{VER_SUBMINOR}")
     quick.gui_it(prog_func,
            run_exit=False,
            new_thread=False,
