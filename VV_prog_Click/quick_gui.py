@@ -447,6 +447,9 @@ class GChoiceComboBox(click.types.Choice):
 
 def count_option(opt):
     sb = _InputSpinBox()
+    # TODO: dirty hack here - should rather be set from 'opt'!
+    sb.setMinimum(1)
+    sb.setMaximum(65535)
 
     def to_command():
         return [opt.opts[0]] * int(sb.text())
