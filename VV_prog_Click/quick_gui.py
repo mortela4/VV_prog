@@ -636,12 +636,13 @@ class CommandLayout(QtWidgets.QGridLayout):
         sys.argv = []
 
     def add_status_indicator(self):
-        # Add status indicator:
+        # Add status indicator
+        # ---------------------
         comp_layout = QtWidgets.QVBoxLayout()
         comp_layout.setSpacing(50)
         # Placeholder:
-        hline2 = QtWidgets.QFrame()
-        comp_layout.addWidget(hline2)
+        v_spacer = QtWidgets.QFrame()
+        comp_layout.addWidget(v_spacer)
         # Horizontal line:
         hline1 = QtWidgets.QFrame()
         hline1.setMinimumWidth(1)
@@ -649,6 +650,7 @@ class CommandLayout(QtWidgets.QGridLayout):
         hline1.setFrameShape(QtWidgets.QFrame.HLine)
         hline1.setFrameShadow(QtWidgets.QFrame.Sunken)
         comp_layout.addWidget(hline1)
+        # Add GUI-element composition into parent layout:
         self.addLayout(comp_layout, self.rowCount() + 1, 1)
         # Label + textbox stacked horizontally:
         status_layout = QtWidgets.QHBoxLayout()
@@ -659,6 +661,16 @@ class CommandLayout(QtWidgets.QGridLayout):
         self.status_out.setStyleSheet("QLineEdit {background-color: rgb(255, 255, 0)}")
         status_layout.addWidget(self.status_out)
         self.addLayout(status_layout, self.rowCount() + 1, 1)
+        # Another horizontal line:
+        comp_layout2 = QtWidgets.QVBoxLayout()
+        hline2 = QtWidgets.QFrame()
+        hline2.setMinimumWidth(1)
+        hline2.setFixedHeight(20)
+        hline2.setFrameShape(QtWidgets.QFrame.HLine)
+        hline2.setFrameShadow(QtWidgets.QFrame.Sunken)
+        comp_layout2.addWidget(hline2)
+        # Clunky and clumsy, but ...
+        self.addLayout(comp_layout2, self.rowCount() + 1, 1)
 
 
 class RunCommand(QtCore.QRunnable):
@@ -749,12 +761,13 @@ class App(QtWidgets.QWidget):
             'term': do nothing
         """
         super().__init__()
+        self.outputType = output
         self.new_thread = new_thread
         self.title = func.name
         self.func = func
         self.initUI(run_exit, QtCore.QRect(left, top, width, height))
         self.threadpool = QtCore.QThreadPool()
-        self.outputEdit = self.initOutput(output)
+        # self.outputEdit = self.initOutput(output)
 
     def initOutput(self, output):
         if output == 'gui':
@@ -762,7 +775,7 @@ class App(QtWidgets.QWidget):
             sys.stdout = out_stream
             sys.stderr = sys.stdout
             text = OutputEdit()
-            text.setWindowTitle('Irrigation Sensor programming output')
+            # text.setWindowTitle('Irrigation Sensor programming output')
             text.setReadOnly(True)
             sys.stdout.textWritten.connect(text.print)
             sys.stdout.textWritten.connect(text.show)
@@ -819,6 +832,14 @@ class App(QtWidgets.QWidget):
         self.setGeometry(geometry)
         self.opt_set = self.initCommandUI(self.func, run_exit, )
         self.setLayout(self.opt_set)
+        process_output_label = QtWidgets.QLabel("Process output:")
+        self.layout().addWidget(process_output_label, self.layout().rowCount() + 1, 1)
+        self.outputEdit = self.initOutput(self.outputType)
+        try:
+            self.layout().addWidget(self.outputEdit, self.layout().rowCount() + 1, 1)
+        except Exception as e:
+            print(f"Exception: {e}")
+        #
         self.show()
 
     @QtCore.pyqtSlot()

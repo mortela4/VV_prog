@@ -8,7 +8,7 @@ from resource_helper import resource_path
 
 
 VER_MAJOR = 1
-VER_MINOR = 1       # Modified GUI look and feel (icons on buttons etc.).
+VER_MINOR = 2       # Process output window is now part of main window.
 VER_SUBMINOR = 0
 
 # JLink command-line for KL27Z target attach:
@@ -392,7 +392,7 @@ if __name__ == "__main__":
            style="qdarkstyle",
            output="gui",
            width=650,
-           height=300,
+           height=750,
            left=100,
            top=100)
 
