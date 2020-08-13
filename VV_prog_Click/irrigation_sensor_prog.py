@@ -10,8 +10,8 @@ from resource_helper import resource_path
 # Version info
 # ============
 VER_MAJOR = 1
-VER_MINOR = 2       # Process output window is now part of main window.
-VER_SUBMINOR = 1    # Fix: 'serial' argument has now 'count'-attribute(=True) --> removed 'type' attribute (yields spinbox in GUI)
+VER_MINOR = 3       # J-Link commander console windows are now hidden (J-Link GUI dialogs and popups are still shown).
+VER_SUBMINOR = 0
 
 # JLink command-line for KL27Z target attach:
 JLINK_EXE_FILE = 'JLink.exe'
@@ -45,11 +45,16 @@ def run_jlink_cmd_file(cmd_file_name, verbose=True):
     #
     print("Running: " + str(cmd_with_args))
     try:
+        startup_info = subprocess.STARTUPINFO()
+        startup_info.dwFlags = subprocess.CREATE_NEW_CONSOLE | subprocess.STARTF_USESHOWWINDOW
+        startup_info.wShowWindow = subprocess.SW_HIDE
+        #
         p1 = subprocess.Popen(cmd_with_args,
                               shell=False,
                               stdin=subprocess.DEVNULL,
                               stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE)
+                              stderr=subprocess.PIPE,
+                              startupinfo=startup_info)
         # Run the command
         output = p1.communicate(timeout=30)[0]
     except subprocess.TimeoutExpired:
