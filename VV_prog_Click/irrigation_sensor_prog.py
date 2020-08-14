@@ -11,7 +11,7 @@ from resource_helper import resource_path
 # ============
 VER_MAJOR = 1
 VER_MINOR = 3       # J-Link commander console windows are now hidden (J-Link GUI dialogs and popups are still shown).
-VER_SUBMINOR = 1    # Removed function comment header to remove heading in main-window GUI.
+VER_SUBMINOR = 2    # Issue 'r' + 'SetPC 0x0' + 'go' when programming has finished.
 
 # JLink command-line for KL27Z target attach:
 JLINK_EXE_FILE = 'JLink.exe'
@@ -244,15 +244,17 @@ def fw_verify_imagenumber(img_num=1, cleanup=True, verbose=True):
     return status
 
 
-def fw_verify_serialnumber(snum, cleanup=True, verbose=True):
+def fw_verify_serialnumber(snum, cleanup=False, verbose=True):
     print("Running FW serial number verification ...", flush=True)
     status = False
     SER_NUM_FLASH_ADDR = "00005C08"
     #
     with open(VERIFY_SERNUM_CMD_FILE, 'w') as fp:
-        fp.write("r\n")
+        fp.write("h\n")
         fp.write("mem32 0x00005c08,1\n")
-        fp.write("q\n")
+        fp.write("rx 500\n")                 # Translates to 500ms Reset-delay.
+        fp.write("g\n")
+        fp.write("qc\n")
     # Run JLink w. file input:
     cmd_status, out_text = run_jlink_cmd_file(VERIFY_SERNUM_CMD_FILE)
     # Remove file if specified:
