@@ -29,6 +29,7 @@ BL_TASKS_CMD_FILE = "VV_bl_tasks.tmp.jlink"
 FW1_TASKS_CMD_FILE = "VV_fw1_prog.tmp.jlink"
 FW2_TASKS_CMD_FILE = "VV_fw2_prog.tmp.jlink"
 POST_TASKS_CMD_FILE = "VV_post_tasks.tmp.jlink"
+FW_PROG_CMD_FILE = "VV_fw_prog_cmdfile.tmp.jlink"
 #
 VERIFY_IMAGENUM_CMD_FILE = "VV_verify_imagenum.tmp.jlink"
 VERIFY_SERNUM_CMD_FILE = "VV_verify_sernum.tmp.jlink"
@@ -178,13 +179,14 @@ def fw_app_prog(num=None, cleanup=True, verbose=True, debug=False):
     return status
 
 
-def fw_post_task(serNo=None, cleanup=True, verbose=True, debug=False):
+def fw_post_task(serial=None, cleanup=True, verbose=True, debug=False):
     status = False
     #
     with open(POST_TASKS_CMD_FILE, 'w') as fp:
+        fp.write("halt\n")
         fp.write("r\n")
         fp.write("w4 0x5c00 0x00000001\n")              # Set image-number=1
-        fp.write("w4 0x5c08 " + hex(serNo) + "\n")      # Set serial number
+        fp.write("w4 0x5c08 " + hex(serial) + "\n")      # Set serial number
         fp.write("q\n")
     # Run JLink w. file input:
     if not debug:
@@ -199,27 +201,157 @@ def fw_post_task(serNo=None, cleanup=True, verbose=True, debug=False):
     return status
 
 
-def run_fw_programming(fw_type, serial_num, erase=True, cleanup=True, debug=False):
+def fw_prepare_target(erase=True, keep_serno=False, serial=0, cleanup=True, verbose=True, debug=False):
+    status = False
     #
-    s2 = True
-    s3 = True
-    s4 = True
+    with open(PRE_TASKS_CMD_FILE, 'w') as fp:
+        fp.write("halt\n")
+        fp.write("r\n")
+        # If required, ERASE target ...
+        if erase:
+            fp.write("unlock Kinetis\n")      # Needed if device is programmed 1st time!
+            fp.write("erase\n")
+        # Set image-number =1(=FW1 startup as default):
+        fp.write("w4 0x5c00 0x00000001\n")  # Set image-number=1
+        # Default write given serial number into config-sector in Flash:
+        if not keep_serno:
+            if serial in range(1, 65355):
+                fp.write("w4 0x5c08 " + hex(serial) + "\n")  # Set serial number
+            else:
+                print(f"Serial number = {serial} is OUT OF RANGE! Cannot use ...")
+        # Readback config-values from Flash:
+        fp.write("mem32 0x00005c00,1\n")
+        fp.write("mem32 0x00005c08,1\n")
+        fp.write("q\n")
+    # Run JLink w. file input:
+    if not debug:
+        cmd_status, jlink_output = run_jlink_cmd_file(PRE_TASKS_CMD_FILE)
+    # Remove file if specified:
+    if cleanup:
+        try:
+            os.remove(PRE_TASKS_CMD_FILE)
+        except OSError:
+            pass
     #
-    s1 = fw_pre_task(erase=erase, cleanup=cleanup, debug=debug)    # Is ALWAYS used! ('s1' always gets assigned)
-    if fw_type == 'bl' or fw_type == 'all':
-        s2 = fw_bl_prog(cleanup=cleanup, debug=debug)
-    if fw_type == '1' or fw_type == 'all':
-        s3 = fw_app_prog(num=1, cleanup=cleanup, debug=debug)
-    if fw_type == '2' or fw_type == 'all':
-        s4 = fw_app_prog(num=2, cleanup=cleanup, debug=debug)
-    s5 = fw_post_task(serNo=serial_num, cleanup=cleanup, debug=debug)
+    if cmd_status:
+        # Verify image number:
+        status = verify_image_number(out_text=jlink_output)
+        # Verify serial number:
+        do_serno_verification = not keep_serno
+        serno_status, serial_num_read = verify_serial_number(out_text=jlink_output, verify=do_serno_verification, serial=serial)
+        if not keep_serno:
+            status = status and serno_status
+        else:
+            serial_num_read = serial
+            status = False
     #
-    status = s1 and s2 and s3 and s4 and s5
+    return status, serial_num_read
+
+
+def run_fw_programming(fw_type, cleanup=True, debug=False):
+    #
+    # Commit action:
+    with open(FW_PROG_CMD_FILE, 'w') as fp:
+        fp.write("halt\n")
+        # fp.write("r\n")
+        # Fill in step for FW1 if relevant:
+        if fw_type == '1' or fw_type == 'all':
+            fw1_srec = os.path.join(srec_path, "IrrigationSensorAppl_FW1.srec")
+            if not os.path.exists(fw1_srec):
+                print(f"Could not write FW1 to Flash memory - SREC file '{fw1_srec}' missing!",
+                      flush=True)
+            else:
+                print(f"Writing FW1 firmware '{fw1_srec}' to boot Flash memory ...", flush=True)
+                fp.write("loadfile %s\n" % fw1_srec)
+        # Fill in step for FW2 if relevant:
+        if fw_type == '2' or fw_type == 'all':
+            fw2_srec = os.path.join(srec_path, "IrrigationSensorAppl_FW2.srec")
+            if not os.path.exists(fw2_srec):
+                print(f"Could not write FW2 to Flash memory - SREC file '{fw1_srec}' missing!",
+                      flush=True)
+            else:
+                print(f"Writing FW2 firmware '{fw2_srec}' to boot Flash memory ...", flush=True)
+                fp.write("loadfile %s\n" % fw2_srec)
+        # Fill in step for BootLoader if relevant:
+        if fw_type == 'bl' or fw_type == 'all':
+            bootloader_srec = os.path.join(srec_path, "IrrigationSensorBootld.srec")
+            if not os.path.exists(bootloader_srec):
+                print(f"Could not write bootloader to Flash memory - SREC file '{bootloader_srec}' missing!",
+                      flush=True)
+            else:
+                print(f"Writing bootloader firmware '{bootloader_srec}' to boot Flash memory ...", flush=True)
+                fp.write("loadfile %s\n" % bootloader_srec)
+
+        # Finalize:
+        fp.write("rnh\n")
+        fp.write("qc\n")
+    # Run J-Link command scriptfile:
+    status, jlink_output = run_jlink_cmd_file(FW_PROG_CMD_FILE)
+    # Remove file if specified:
+    if cleanup:
+        try:
+            os.remove(FW_PROG_CMD_FILE)
+        except OSError:
+            pass
     #
     return status
 
 
 # ******************** FW verification ***********************************
+
+def verify_image_number(out_text=None, img_num=1, verbose=True):
+    status = False
+    IMAGE_NUM_FLASH_ADDR = "00005C00"
+    #
+    print("")
+    print("Output analysis:", flush=True)
+    print("---------------------", flush=True)
+    for line in out_text:
+        if line.startswith(IMAGE_NUM_FLASH_ADDR):
+            addr_content = line.split('=')[-1]      # First field is address, last field is value
+            print(f"Content of address {IMAGE_NUM_FLASH_ADDR} = {addr_content}", flush=True)
+            try:
+                val = int(addr_content, 16)
+                if val == img_num:
+                    print(f"Readback-value={val} is equal to expected(={img_num}).", flush=True)
+                    status = True
+                else:
+                    print(f"Readback-value={val} is equal to expected(={img_num}).", flush=True)
+            except ValueError:
+                print(f"{addr_content} is not a valid HEX-string!", flush=True)
+    #
+    return status
+
+
+def verify_serial_number(out_text=None, verify=True, serial=0, verbose=True):
+    status = False
+    readout = serial
+    SER_NUM_FLASH_ADDR = "00005C08"
+    #
+    print("")
+    print("Output analysis:", flush=True)
+    print("---------------------", flush=True)
+    for line in out_text:
+        if line.startswith(SER_NUM_FLASH_ADDR):
+            addr_content = line.split('=')[-1]  # First field is address, last field is value
+            print("Content of address %s = %s" % (SER_NUM_FLASH_ADDR, addr_content))
+            try:
+                val = int(addr_content, 16)
+                if val == serial and 0 != serial:
+                    print(f"Readback serno={val} is equal to expected(={serial}).", flush=True)
+                    status = True
+                else:
+                    if verify:
+                        print(f"Readback serno={val} is NOT equal to expected(={serial})!!", flush=True)
+                    else:
+                        status = True
+                # Readback value:
+                readout = val
+            except ValueError:
+                print(f"{addr_content} is not a valid HEX-string!", flush=True)
+    #
+    return status, readout
+
 
 def fw_verify_imagenumber(img_num=1, cleanup=True, verbose=True):
     status = False
@@ -264,7 +396,7 @@ def fw_verify_serialnumber(snum, cleanup=True, verbose=True):
     SER_NUM_FLASH_ADDR = "00005C08"
     #
     with open(VERIFY_SERNUM_CMD_FILE, 'w') as fp:
-        fp.write("h\n")
+        fp.write("halt\n")
         fp.write("mem32 0x00005c08,1\n")
         # fp.write("rsettype 2\n")
         fp.write("rnh\n")
@@ -329,8 +461,8 @@ def fw_dummy_task(cleanup=True, debug=False, verbose=True):
 
 def run_fw_verification(serial_num):
     #
-    # Run dummy:
-    fw_dummy_task()
+    # Run (optional) dummy:
+    # fw_dummy_task()
     #
     s1 = fw_verify_imagenumber()
     print("")
@@ -362,10 +494,11 @@ def run_fw_verification(serial_num):
               type=click.Choice(['all', '1', '2', 'bl']),
               default='all',
               help="Sensor FW: '1' = FW1, '2' = FW2, 'bl' = boot-loader, 'all' = bl + 1 + 2")
-@click.option('--erase/--no_erase', default=True, help="Erase entire Flash memory before programming")
+@click.option('--erase/--no_erase',
+              default=True,
+              help="Erase entire Flash memory before programming")
 # The command itself:
-def run_irrigation_sensor_programming(path, serial, fw_type,
-                                      erase, no_erase=False) -> bool:
+def run_irrigation_sensor_programming(path, serial, fw_type, erase) -> bool:
     # NOTE: no doc-block here to avoid Quick picking it up and use for window title!
     #
     global srec_path
@@ -381,14 +514,20 @@ def run_irrigation_sensor_programming(path, serial, fw_type,
     elif serial is None:
         raise Exception("No value given for serial number!\nLegal values: 1-65535")
     else:
-        # Test only:
         srec_path = path
+        # Test only example:
         # ret_val = run_fw_programming(fw_type, serial_num, erase_flash_first, cleanup=False, debug=True)
         # Non-test environment:
-        status1 = run_fw_programming(fw_type=fw_type, serial_num=serial, erase=erase)
-        status2 = run_fw_verification(serial_num=serial)
+        """
+        status1 = fw_pre_task(erase=erase)    # Is ALWAYS used! ('s1' always gets assigned)
+        status2 = fw_post_task(serial=serial)
+        status3 = run_fw_verification(serial_num=serial)
+        """
+        status1 = fw_prepare_target(erase=erase, keep_serno=False, serial=serial)
+        status4 = run_fw_programming(fw_type=fw_type)
         #
-        total_status = status1 and status2
+        # total_status = status1 and status2 and status3 and status4
+        total_status = status1 and status4
         if total_status:
             quick.set_app_status(status='success')
         else:
