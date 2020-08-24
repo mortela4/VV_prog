@@ -1,5 +1,6 @@
 import sys
 import os
+import sys
 import subprocess
 # For (optional) GUI
 import click
@@ -14,7 +15,12 @@ VER_MINOR = 3       # J-Link commander console windows are now hidden (J-Link GU
 VER_SUBMINOR = 2    # Issue 'r' + 'SetPC 0x0' + 'go' when programming has finished.
 
 # JLink command-line for KL27Z target attach:
-JLINK_EXE_FILE = 'JLink.exe'
+# if sys.platform == 'linux':
+if os.name == 'posix':
+    JLINK_EXE_FILE = 'JLinkExe'
+else:
+    JLINK_EXE_FILE = 'JLink.exe'
+
 # TODO: change in future to accomodate different devices??
 JLINK_TARGET_OPTIONS = ['-device', 'MKL27Z256XXX4', '-if', 'SWD', '-speed', '4000', '-autoconnect', '1']
 # (temporary) file names:
@@ -45,16 +51,24 @@ def run_jlink_cmd_file(cmd_file_name, verbose=True):
     #
     print("Running: " + str(cmd_with_args))
     try:
-        startup_info = subprocess.STARTUPINFO()
-        startup_info.dwFlags = subprocess.CREATE_NEW_CONSOLE | subprocess.STARTF_USESHOWWINDOW
-        startup_info.wShowWindow = subprocess.SW_HIDE
-        #
-        p1 = subprocess.Popen(cmd_with_args,
-                              shell=False,
-                              stdin=subprocess.DEVNULL,
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE,
-                              startupinfo=startup_info)
+        # if sys.plaform == 'win32':
+        if os.name != 'posix':
+            startup_info = subprocess.STARTUPINFO()
+            startup_info.dwFlags = subprocess.CREATE_NEW_CONSOLE | subprocess.STARTF_USESHOWWINDOW
+            startup_info.wShowWindow = subprocess.SW_HIDE
+            #
+            p1 = subprocess.Popen(cmd_with_args,
+                                  shell=False,
+                                  stdin=subprocess.DEVNULL,
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE,
+                                  startupinfo=startup_info)
+        else:
+            p1 = subprocess.Popen(cmd_with_args,
+                                  shell=False,
+                                  stdin=subprocess.DEVNULL,
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE)
         # Run the command
         output = p1.communicate(timeout=30)[0]
     except subprocess.TimeoutExpired:
