@@ -11,8 +11,8 @@ from resource_helper import resource_path
 # Version info
 # ============
 VER_MAJOR = 1
-VER_MINOR = 3       # J-Link commander console windows are now hidden (J-Link GUI dialogs and popups are still shown).
-VER_SUBMINOR = 2    # Issue 'r' + 'SetPC 0x0' + 'go' when programming has finished.
+VER_MINOR = 4       # Restructuring: config-part unified and FW-prog unified (single functions). Correct startup via BL programmed as last step.
+VER_SUBMINOR = 0
 
 # JLink command-line for KL27Z target attach:
 # if sys.platform == 'linux':
@@ -21,7 +21,7 @@ if os.name == 'posix':
 else:
     JLINK_EXE_FILE = 'JLink.exe'
 
-# TODO: change in future to accomodate different devices??
+# TODO: change in future to accommodate different devices??
 JLINK_TARGET_OPTIONS = ['-device', 'MKL27Z256XXX4', '-if', 'SWD', '-speed', '4000', '-autoconnect', '1']
 # (temporary) file names:
 PRE_TASKS_CMD_FILE = "VV_pre_tasks.tmp.jlink"
@@ -325,5 +325,6 @@ if __name__ == "__main__":
            width=650,
            height=750,
            left=100,
-           top=100)
+           top=100,
+           app_icon="7sense-7-blaa.png")
 

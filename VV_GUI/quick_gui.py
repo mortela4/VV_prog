@@ -778,7 +778,7 @@ class App(QtWidgets.QWidget):
     app_status_indication = QtCore.pyqtSignal(str)
 
     def __init__(self, func, run_exit, new_thread, output='gui', left=10, top=10,
-            width=400, height=140):
+            width=400, height=140, app_icon=None):
         """
         Parameters
         ----------
@@ -787,6 +787,8 @@ class App(QtWidgets.QWidget):
             'term': do nothing
         """
         super().__init__()
+        if app_icon is not None:
+            self.setWindowIcon(QtGui.QIcon(app_icon))
         self.outputType = output
         self.new_thread = new_thread
         self.title = func.name
@@ -908,7 +910,7 @@ class App(QtWidgets.QWidget):
 
 # Make CLI app into GUI app:
 
-def gui_it(click_func, style="qdarkstyle", **argvs)->None:
+def gui_it(click_func, style="qdarkstyle", **argvs) -> None:
     """
     Parameters
     ----------
