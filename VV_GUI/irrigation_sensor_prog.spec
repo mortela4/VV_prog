@@ -6,9 +6,9 @@ block_cipher = None
 
 
 a = Analysis(['irrigation_sensor_prog.py'],
-             pathex=['P:\\MortenL\\proj_info\\VannVogn\\firm_ware\\VV_flash_prog_proj\\VV_prog\\VV_prog_Click'],
+             pathex=['P:\\MortenL\\proj_info\\VannVogn\\firm_ware\\VV_flash_prog_proj\\VV_prog\\VV_GUI'],
              binaries=[('JLink.exe', '.'), ('JLinkARM.dll', '.')],
-             datas=[('copy.png', '.'), ('7sense-7-blaa.png', '.')],
+             datas=[('7sense-7-hvit.png', '.'), ('copy.png', '.')],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],

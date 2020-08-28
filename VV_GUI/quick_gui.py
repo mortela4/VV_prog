@@ -789,6 +789,7 @@ class App(QtWidgets.QWidget):
         super().__init__()
         if app_icon is not None:
             self.setWindowIcon(QtGui.QIcon(app_icon))
+        #
         self.outputType = output
         self.new_thread = new_thread
         self.title = func.name
@@ -934,7 +935,14 @@ def gui_it(click_func, style="qdarkstyle", **argvs) -> None:
     print(app.libraryPaths())   # For DEBUG only!
     print(f"Running application '{app_path}' ...")
     app.setStyleSheet(_gstyle.stylesheet)
-
+    app_icon = argvs.get("app_icon", None)
+    print(f"app_icon: {app_icon}")
+    if app_icon is not None:
+        print("Setting up tray icon ...")
+        tray_icon = QtWidgets.QSystemTrayIcon()
+        tray_icon.setIcon(QtGui.QIcon(app_icon))
+        tray_icon.setVisible(True)
+        tray_icon.show()
     # set the default value for argvs
     argvs["run_exit"] = argvs.get("run_exit", False)
     argvs["new_thread"] = argvs.get("new_thread", False)

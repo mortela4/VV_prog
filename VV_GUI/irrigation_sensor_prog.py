@@ -326,5 +326,5 @@ if __name__ == "__main__":
            height=750,
            left=100,
            top=100,
-           app_icon="7sense-7-blaa.png")
+           app_icon=resource_path("7sense-7-hvit.png"))
 
