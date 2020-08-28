@@ -1,6 +1,7 @@
 import sys
 import os
 import sys
+import time
 import subprocess
 # For (optional) GUI
 import click
@@ -90,6 +91,41 @@ def run_jlink_cmd_file(cmd_file_name, verbose=True):
     status = (p1.returncode == SUBPROC_RETVAL_STATUS_SUCCESS)
     #
     return status, lines_out
+
+
+# ********************* FRAM erase task ***********************
+def vv_fram_erase(cleanup=False, verbose=True, debug=False):
+    """
+    Erase FRAM on irrigation-sensor target (VV).
+    Note that erase-application START-address is NOT equal to RAM-startaddr!
+    Instead, the 'ResetISR' symbol is located 212 bytes ABOVE the vector table, at addr=0x1FFFE0D4.
+    """
+    FRAM_ERASE_JLINK_CMD_FILE = "FRAM_erase.tmp.jlink"
+    FRAM_ERASE_APP_SREC = resource_path("VV_FRAM_eraser.srec")
+    FRAM_ERASE_APP_START_ADDR = 0x1FFFE0D4
+    #
+    with open(FRAM_ERASE_JLINK_CMD_FILE, 'w') as fp:
+        fp.write("halt\n")
+        # fp.write("r\n")
+        fp.write(f"loadfile {FRAM_ERASE_APP_SREC}\n")
+        fp.write(f"setpc {hex(FRAM_ERASE_APP_START_ADDR)}\n")
+        fp.write("g\n")
+        fp.write("sleep 15000\n")   # Must ensure we sleep at least 15sec to allow erase-app to run to finish!
+        fp.write("q\n")
+    # Need to sleep at least 15sec to allow FRAM-erase process to complete.
+    # TODO: check when erase-app has finished blanking FRAM!
+    #  (but, tricky without serial port connection ...)
+    # TODO: also determine end result of FRAM-erase (PASS or FAIL)!
+    cmd_status, jlink_output = run_jlink_cmd_file(FRAM_ERASE_JLINK_CMD_FILE)
+    # Remove file if specified:
+    if cleanup:
+        try:
+            os.remove(FRAM_ERASE_JLINK_CMD_FILE)
+        except OSError:
+            pass
+    time.sleep(10)
+    #
+    return cmd_status, jlink_output
 
 
 # ********************* Flash prog tasks **********************
@@ -262,18 +298,21 @@ def verify_serial_number(out_text=None, verify=True, serial=0, verbose=True):
               type=click.Choice(['all', '1', '2', 'bl']),
               default='all',
               help="Sensor FW: '1' = FW1, '2' = FW2, 'bl' = boot-loader, 'all' = bl + 1 + 2")
+@click.option('--fram_erase/--no_fram_erase',
+              default=False,
+              help="Erase entire FRAM config-memory (set to all zero) on target before programming")
 @click.option('--erase/--no_erase',
               default=True,
               help="Erase entire Flash memory before programming")
 # The command itself:
-def run_irrigation_sensor_programming(path, serial, fw_type, erase) -> bool:
+def run_irrigation_sensor_programming(path, serial, fw_type, fram_erase, erase) -> bool:
     # NOTE: no doc-block here to avoid Quick picking it up and use for window title!
     #
     global srec_path
     #
-    click.echo("Startup ...")
+    print("Startup ...", flush=True)
     # Run:
-    click.echo(f"path={path}, fw_type={fw_type}, serial={serial}, erase={erase} ...")
+    print(f"path={path}, fw_type={fw_type}, serial={serial}, fram_erase={fram_erase}, erase={erase} ...", flush=True)
     #
     if path is None or fw_type is None or serial is None or erase is None:
         raise Exception("Not all options specified!")
@@ -286,11 +325,17 @@ def run_irrigation_sensor_programming(path, serial, fw_type, erase) -> bool:
         # Test only example:
         # ret_val = run_fw_programming(fw_type, serial_num, erase_flash_first, cleanup=False, debug=True)
         # Non-test environment:
+        fram_status = True
+        if fram_erase:
+            # Task will wait to allow FRAM-eraser application to run on target ....
+            print("FRAM erase: 15 seconds is required to allow FRAM on target to be erased ...", flush=True)
+            fram_status = vv_fram_erase()
+            print("FRAM on target is now erased - continuing ...", flush=True)
         config_status = fw_prepare_target(erase=erase, keep_serno=False, serial=serial)
         fw_prog_status = run_fw_programming(fw_type=fw_type)
         #
         # total_status = status1 and status2 and status3 and status4
-        total_status = config_status and fw_prog_status
+        total_status = config_status and fw_prog_status and fram_status
         if total_status:
             quick.set_app_status(status='success')
         else:
