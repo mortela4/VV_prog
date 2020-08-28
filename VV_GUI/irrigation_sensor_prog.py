@@ -94,7 +94,7 @@ def run_jlink_cmd_file(cmd_file_name, verbose=True):
 
 
 # ********************* FRAM erase task ***********************
-def vv_fram_erase(cleanup=False, verbose=True, debug=False):
+def vv_fram_erase(cleanup=True, verbose=True, debug=False):
     """
     Erase FRAM on irrigation-sensor target (VV).
     Note that erase-application START-address is NOT equal to RAM-startaddr!
@@ -106,13 +106,12 @@ def vv_fram_erase(cleanup=False, verbose=True, debug=False):
     #
     with open(FRAM_ERASE_JLINK_CMD_FILE, 'w') as fp:
         fp.write("halt\n")
-        # fp.write("r\n")
         fp.write(f"loadfile {FRAM_ERASE_APP_SREC}\n")
         fp.write(f"setpc {hex(FRAM_ERASE_APP_START_ADDR)}\n")
         fp.write("g\n")
-        fp.write("sleep 15000\n")   # Must ensure we sleep at least 15sec to allow erase-app to run to finish!
+        fp.write("sleep 6000\n")   # Must ensure we sleep at least 5sec to allow erase-app to run to finish!
         fp.write("q\n")
-    # Need to sleep at least 15sec to allow FRAM-erase process to complete.
+    # Need to sleep at least 5sec to allow FRAM-erase process to complete.
     # TODO: check when erase-app has finished blanking FRAM!
     #  (but, tricky without serial port connection ...)
     # TODO: also determine end result of FRAM-erase (PASS or FAIL)!
@@ -123,7 +122,6 @@ def vv_fram_erase(cleanup=False, verbose=True, debug=False):
             os.remove(FRAM_ERASE_JLINK_CMD_FILE)
         except OSError:
             pass
-    time.sleep(10)
     #
     return cmd_status, jlink_output
 
@@ -328,7 +326,7 @@ def run_irrigation_sensor_programming(path, serial, fw_type, fram_erase, erase) 
         fram_status = True
         if fram_erase:
             # Task will wait to allow FRAM-eraser application to run on target ....
-            print("FRAM erase: 15 seconds is required to allow FRAM on target to be erased ...", flush=True)
+            print("FRAM erase: 5 seconds is required to allow FRAM on target to be erased ...", flush=True)
             fram_status = vv_fram_erase()
             print("FRAM on target is now erased - continuing ...", flush=True)
         config_status = fw_prepare_target(erase=erase, keep_serno=False, serial=serial)
