@@ -12,8 +12,8 @@ from resource_helper import resource_path
 # Version info
 # ============
 VER_MAJOR = 1
-VER_MINOR = 4       # Restructuring: config-part unified and FW-prog unified (single functions). Correct startup via BL programmed as last step.
-VER_SUBMINOR = 0
+VER_MINOR = 5       # Complete FRAM-erase is now an option.
+VER_SUBMINOR = 1    # Put device-erase as first step, and checking output from JLink.exe for 'Error'/'ERROR'.
 
 # JLink command-line for KL27Z target attach:
 # if sys.platform == 'linux':
@@ -87,7 +87,10 @@ def run_jlink_cmd_file(cmd_file_name, verbose=True):
         # Check for J-Link NOT connected:
         if line_str.startswith("Cannot connect to target."):
             return status, lines_out
-
+        # Check for 'Error'/'ERROR' in output:
+        if line_str.find('Error') > 0 or line_str.find('ERROR') > 0:
+            return status, lines_out
+    # If 'normal' output - or NO output at all - the return value is used to decide 'status':
     status = (p1.returncode == SUBPROC_RETVAL_STATUS_SUCCESS)
     #
     return status, lines_out
@@ -106,6 +109,7 @@ def vv_fram_erase(cleanup=True, verbose=True, debug=False):
     #
     with open(FRAM_ERASE_JLINK_CMD_FILE, 'w') as fp:
         fp.write("halt\n")
+        fp.write("r\n")
         fp.write(f"loadfile {FRAM_ERASE_APP_SREC}\n")
         fp.write(f"setpc {hex(FRAM_ERASE_APP_START_ADDR)}\n")
         fp.write("g\n")
@@ -323,13 +327,13 @@ def run_irrigation_sensor_programming(path, serial, fw_type, fram_erase, erase) 
         # Test only example:
         # ret_val = run_fw_programming(fw_type, serial_num, erase_flash_first, cleanup=False, debug=True)
         # Non-test environment:
+        config_status = fw_prepare_target(erase=erase, keep_serno=False, serial=serial)
         fram_status = True
         if fram_erase:
             # Task will wait to allow FRAM-eraser application to run on target ....
             print("FRAM erase: 5 seconds is required to allow FRAM on target to be erased ...", flush=True)
             fram_status = vv_fram_erase()
             print("FRAM on target is now erased - continuing ...", flush=True)
-        config_status = fw_prepare_target(erase=erase, keep_serno=False, serial=serial)
         fw_prog_status = run_fw_programming(fw_type=fw_type)
         #
         # total_status = status1 and status2 and status3 and status4
