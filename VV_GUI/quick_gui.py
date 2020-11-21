@@ -778,7 +778,7 @@ class App(QtWidgets.QWidget):
     app_status_indication = QtCore.pyqtSignal(str)
 
     def __init__(self, func, run_exit, new_thread, output='gui', left=10, top=10,
-            width=400, height=140):
+            width=400, height=140, app_icon=None):
         """
         Parameters
         ----------
@@ -787,6 +787,9 @@ class App(QtWidgets.QWidget):
             'term': do nothing
         """
         super().__init__()
+        if app_icon is not None:
+            self.setWindowIcon(QtGui.QIcon(app_icon))
+        #
         self.outputType = output
         self.new_thread = new_thread
         self.title = func.name
@@ -908,7 +911,7 @@ class App(QtWidgets.QWidget):
 
 # Make CLI app into GUI app:
 
-def gui_it(click_func, style="qdarkstyle", **argvs)->None:
+def gui_it(click_func, style="qdarkstyle", **argvs) -> None:
     """
     Parameters
     ----------
@@ -932,7 +935,14 @@ def gui_it(click_func, style="qdarkstyle", **argvs)->None:
     print(app.libraryPaths())   # For DEBUG only!
     print(f"Running application '{app_path}' ...")
     app.setStyleSheet(_gstyle.stylesheet)
-
+    app_icon = argvs.get("app_icon", None)
+    print(f"app_icon: {app_icon}")
+    if app_icon is not None:
+        print("Setting up tray icon ...")
+        tray_icon = QtWidgets.QSystemTrayIcon()
+        tray_icon.setIcon(QtGui.QIcon(app_icon))
+        tray_icon.setVisible(True)
+        tray_icon.show()
     # set the default value for argvs
     argvs["run_exit"] = argvs.get("run_exit", False)
     argvs["new_thread"] = argvs.get("new_thread", False)
