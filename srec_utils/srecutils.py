@@ -173,6 +173,10 @@ def parse_srec(srec):
 
 
 def get_srec_addr_and_data(srec):
+    """
+    Get only address and data from SRec - discard other info like e.g. 'S<nn>' record-type and checksum.
+    Suitable for emulation and testing.
+    """
     _, _, addr, data, _ = parse_srec(srec)
     return addr, data
 
