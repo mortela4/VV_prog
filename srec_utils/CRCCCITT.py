@@ -33,7 +33,7 @@ class CRCCCITT(object):
             if not len(self.crc_ccitt_table):
                 self.init_crc_table()
         except Exception as e:
-            print("EXCEPTION(__init__): {}".format(e))
+            print("EXCEPTION(__init__): {}".format(e))    # TODO: raise a KeyError here? (right after 'print()' ...)
 
     def calculate(self, input_data=None):
         try:
@@ -54,6 +54,7 @@ class CRCCCITT(object):
             return crc_value
         except Exception as e:
             print("EXCEPTION(calculate): {}".format(e))
+            return None
 
     def calculate_accumulated(self, input_data=None, prev_value=None):
         """ Simple extension of 'calculate' for accumulation """
