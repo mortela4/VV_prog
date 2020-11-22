@@ -19,6 +19,11 @@ prog_offset = 0x6000                        # TODO: support FW1-offset also (or 
 def progmem_info():
     print(f"Progmem length: {len(prog_mem)} bytes ({len(prog_mem)/ONE_KB} KB)")
 
+def progmem_fill(val: int = 0xFF):
+    prog_mem = bytearray([val]*FLASH_SIZE)
+
+def progmem_erase():
+    progmem_fill()
 
 def progmem_write(start_addr: int, data: bytearray):
     """
@@ -45,9 +50,9 @@ def progmem_crc() -> int:
 if __name__ == "__main__":
     progmem_info()
     print(f"Initial checksum: 0x{progmem_crc():X}")
-    progmem_write(0x6000, bytearray([0x0A, 0x0B, 0x0C]) )
+    progmem_write( 0x6000, bytearray([0x0A, 0x0B, 0x0C]) )
     print(f"Second checksum: 0x{progmem_crc():X}")
-    progmem_write(0x5000, bytearray([0x0A, 0x0B, 0x0C]) )
+    progmem_write( 0x5000, bytearray([0x0A, 0x0B, 0x0C]) )
 
 
 
