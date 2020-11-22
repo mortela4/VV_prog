@@ -172,3 +172,7 @@ def parse_srec(srec):
     return record_type, data_len, addr, data, checksum
 
 
+def get_srec_addr_and_data(srec):
+    _, _, addr, data, _ = parse_srec(srec)
+    return addr, data
+
