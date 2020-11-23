@@ -169,6 +169,7 @@ def parse_srec(srec):
     addr = srec[4:4 + addr_len]
     data = srec[4 + addr_len:len(srec)-2]
     checksum = srec[len(srec) - 2:]
+    # print(f"Type: 0x{record_type}, len={int(data_len, 16) - 4}, addr=0x{addr}, data: 0x{data}, checksum=0x{checksum}")
     return record_type, data_len, addr, data, checksum
 
 
@@ -180,16 +181,20 @@ def get_srec_addr_and_data(srec):
     _, _, addr_str, data_str_list, _ = parse_srec(srec)
     #
     try:
-        addr = int(addr_str)
+        addr = int(addr_str, 16)
     except ValueError:
         print(f"Cannot parse address = {addr_str}")
         addr = -1
     #
     try:
-        data = bytearray(data_str_list)
+        byte_data = bytearray()
+        for position in range(0, len(data_str_list), 2):
+            current_byte = data_str_list[position : position+2]
+            int_value = int(current_byte, 16)
+            byte_data.append(int_value)
     except TypeError:
         print(f"Cannot parse data = {data_str_list}")
-        data = None
+        byte_data = None
     #
-    return addr, data
+    return addr, byte_data
 

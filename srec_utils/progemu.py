@@ -60,8 +60,9 @@ class ProgMem:
         # Program:
         total_bytes_programmed = 0
         for s_record in s_records:
-            addr, data = get_srec_addr_and_data(s_record)
-            total_bytes_programmed += self.progmem_write(addr, data)
+            if s_record.startswith('S2'):                     # DATA-record (w. 24-bit address)?
+                addr, data = get_srec_addr_and_data(s_record)
+                total_bytes_programmed += self.progmem_write(addr, data)
         #
         print(f"\nFINISHED programming! Wrote {total_bytes_programmed} bytes to program memory.")
 
@@ -74,12 +75,17 @@ if __name__ == "__main__":
     print(f"Initial checksum: 0x{pmem.progmem_crc():X}")
     pmem.progmem_write( 0x6000, bytearray([0x0A, 0x0B, 0x0C]) )
     print(f"Second checksum: 0x{pmem.progmem_crc():X}")
-    #pmem.progmem_write( 0x5000, bytearray([0x0A, 0x0B, 0x0C]) )
     pmem.progmem_erase()
     print(f"Erased pmem checksum: 0x{pmem.progmem_crc():X}")
     pmem.progmem_load("srec_utils/FW1.srec")
     print(f"Programmed pmem checksum: 0x{pmem.progmem_crc():X}")
-
+    # Must set new offset=0x23000 when using FW2:
+    pmem = ProgMem(image_offset=0x23000, debug=True)
+    print(f"Erased pmem checksum: 0x{pmem.progmem_crc():X}")
+    pmem.progmem_load("srec_utils/FW2.srec")
+    print(f"Programmed pmem checksum: 0x{pmem.progmem_crc():X}")
+    #pmem.progmem_write( 0x5000, bytearray([0x0A, 0x0B, 0x0C]) )
+    
 
 
 
