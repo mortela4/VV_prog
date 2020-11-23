@@ -167,8 +167,9 @@ def parse_srec(srec):
     data_len = srec[2:4]
     addr_len = __ADDR_LEN.get(record_type) * 2
     addr = srec[4:4 + addr_len]
-    data = srec[4 + addr_len:len(srec)-2]
-    checksum = srec[len(srec) - 2:]
+    data = srec[4 + addr_len:-3]
+    checksum = srec[-3:]
+    # DEBUG:
     # print(f"Type: 0x{record_type}, len={int(data_len, 16) - 4}, addr=0x{addr}, data: 0x{data}, checksum=0x{checksum}")
     return record_type, data_len, addr, data, checksum
 
