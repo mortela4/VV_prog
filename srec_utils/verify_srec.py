@@ -103,7 +103,7 @@ class VerifySrecord:
         adress = self.srec[4:4 + self.address_length]
         addr_val = int(adress, 16)
         if debug:
-            print("Addres of SRecord: %s" % hex(addr_val))
+            print("Address of SRecord: %s" % hex(addr_val))
         if addr_val < self.addr_min or addr_val > self.addr_max:
             print(
                 "Invalid address: %s (valid range: %s to %s)" % (hex(addr_val), hex(self.addr_min), hex(self.addr_max)))

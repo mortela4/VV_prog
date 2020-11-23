@@ -5,7 +5,7 @@
 The implementation is a bytearray.
 """
 
-import srecutils
+from srecutils import get_srec_addr_and_data
 from CRCCCITT import CRCCCITT
 
 
@@ -14,10 +14,11 @@ FLASH_SIZE = ONE_KB * 116                   # VV ver.1 has 116KB image-sizes
 
 
 class ProgMem:
-    def __init__(self, image_offset=0x6000, pmem_size=FLASH_SIZE):
+    def __init__(self, image_offset=0x6000, pmem_size=FLASH_SIZE, debug: bool = False):
         self.prog_mem = bytearray([0xFF]*pmem_size)
         self.prog_offset = image_offset       
-        self.psize = pmem_size                 
+        self.psize = pmem_size
+        self.debug = debug                 
 
     def progmem_info(self):
         print(f"Progmem length: {len(self.prog_mem)} bytes ({len(self.prog_mem)/ONE_KB} KB)")
@@ -38,25 +39,47 @@ class ProgMem:
             raise ValueError
         #
         data_len = len(data)   # TODO: check data-length too!
+        end_addr = prog_start_addr + (data_len - 1)
         #
         for i in range(data_len):
             self.prog_mem[prog_start_addr + i] = data[i]
         # DEBUG:
+        if self.debug:
+            print(f"Wrote {data_len} bytes to address range 0x{prog_start_addr:X} - 0x{end_addr:X}")
+        #
+        return data_len
 
     def progmem_crc(self) -> int:
         crc_calc = CRCCCITT()
         check_sum = crc_calc.calculate(self.prog_mem)
         return check_sum
 
+    def progmem_load(self, filename: str):
+        with open(filename, 'r') as srec_file:
+            s_records = srec_file.readlines()
+        # Program:
+        total_bytes_programmed = 0
+        for s_record in s_records:
+            addr, data = get_srec_addr_and_data(s_record)
+            total_bytes_programmed += self.progmem_write(addr, data)
+        #
+        print(f"\nFINISHED programming! Wrote {total_bytes_programmed} bytes to program memory.")
+
+
 
 # ******************* TESTS **********************
 if __name__ == "__main__":
-    pmem = ProgMem()
+    pmem = ProgMem(debug=True)
     pmem.progmem_info()
     print(f"Initial checksum: 0x{pmem.progmem_crc():X}")
     pmem.progmem_write( 0x6000, bytearray([0x0A, 0x0B, 0x0C]) )
     print(f"Second checksum: 0x{pmem.progmem_crc():X}")
-    pmem.progmem_write( 0x5000, bytearray([0x0A, 0x0B, 0x0C]) )
+    #pmem.progmem_write( 0x5000, bytearray([0x0A, 0x0B, 0x0C]) )
+    pmem.progmem_erase()
+    print(f"Erased pmem checksum: 0x{pmem.progmem_crc():X}")
+    pmem.progmem_load("srec_utils/FW1.srec")
+    print(f"Programmed pmem checksum: 0x{pmem.progmem_crc():X}")
+
 
 
 
