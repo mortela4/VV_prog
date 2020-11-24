@@ -170,7 +170,7 @@ def parse_srec(srec):
     data = srec[4 + addr_len:-3]
     checksum = srec[-3:]
     # DEBUG:
-    # print(f"Type: 0x{record_type}, len={int(data_len, 16) - 4}, addr=0x{addr}, data: 0x{data}, checksum=0x{checksum}")
+    # print(f"Type: '{record_type}', len={int(data_len, 16) - 4}, addr=0x{addr}, data: 0x{data}, checksum=0x{checksum}")
     return record_type, data_len, addr, data, checksum
 
 
