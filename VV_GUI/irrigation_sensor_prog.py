@@ -90,8 +90,14 @@ def run_jlink_cmd_file(cmd_file_name, verbose=True):
         lines_out.append(line_str)
         if verbose:
             print(line_str)
-        # Check for J-Link NOT connected:
-        if line_str.startswith("Cannot connect to target."):
+        # Check for J-Link NOT connected, or connection problems:
+        if line_str.startswith("Cannot connect to target") or line_str.startswith("Connecting to J-Link via USB...FAILED"):
+            return status, lines_out
+        # Check for WRITE-errors:
+        if line_str.startswith("Could not write"):
+            return status, lines_out
+        # Check for 'Error'/'ERROR' in output:
+        if line_str.find('Error') > 0 or line_str.find('ERROR') > 0:
             return status, lines_out
         # Check for 'Error'/'ERROR' in output:
         if line_str.find('Error') > 0 or line_str.find('ERROR') > 0:
