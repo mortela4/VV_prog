@@ -13,7 +13,7 @@ from resource_helper import resource_path
 # ============
 VER_MAJOR = 1
 VER_MINOR = 6       # Choosing between sensor-types (so far AA, or AB) is now an option.
-VER_SUBMINOR = 1    # Fix: closed issue#1 = status reported as 'PASS' when J-Link is NOT connected.    
+VER_SUBMINOR = 2    # Fix: closed issue#2 = handling 'target-prepare' for 'AB'-type sensor w. K32L2A41 MCU (setting imgNum=1 and serialNo in CONFI-sector of Flash).    
 
 # JLink command-line for KL27Z target attach:
 # if sys.platform == 'linux':
@@ -22,9 +22,18 @@ if os.name == 'posix':
 else:
     JLINK_EXE_FILE = 'JLink.exe'
 
-# TODO: change in future to accommodate different devices??
+# Generic Flash-definitions (CONFIG-sector only --> firmware-adresses are all contained in SREC):
+CONFIG_SECTOR_IMAGENUM_OFFSET = 0       # Occupies 4 bytes - signifies whether FW1 or FW2 shall be started by bootloader
+CONFIG_SECTOR_UPGBIT_OFFSET = 4         # Occupies 4 bytes (even though only bit0 from LSB is used to signify an upgrade=FOTA to be performed by bootloader)
+CONFIG_SECTOR_SERIALNO_OFFSET = 8       # 2 doublewords for IMAGENUM(=field no.0) and UPG(=field no.1) fields respectively, correspond to 8 bytes offset before field no.2 = SERNO
+
+# 'AA'-type sensor definitions:
 IRRIGATION_SENSOR_REV_AA_MCU = 'MKL27Z256XXX4'
+IRRIGATION_SENSOR_REV_AA_CONFIG_START = 0x00005C00   # Max. bootloader size is 23KB --> FW1 starts at 23+1 = 24KB = 0x6000 offset (CONFIG=1KB)
+# 'AB'-type sensor definitions:
 IRRIGATION_SENSOR_REV_AB_MCU = 'K32L2A41XXXXA'
+IRRIGATION_SENSOR_REV_AB_CONFIG_START = 0x00008C00   # Max. bootloader size is 35KB --> FW1 starts at 35+1 = 36KB = 0x9000 offset (CONFIG=1KB)
+
 JLINK_TARGET_MCU_OPTION_IDX = 1   # Relates to position in list below. TODO: rather use dictionary?
 JLINK_TARGET_OPTIONS = ['-device', IRRIGATION_SENSOR_REV_AA_MCU, '-if', 'SWD', '-speed', '4000', '-autoconnect', '1']     # Default: assume 'rev.AA' sensor = KL27Z256 MCU
 
@@ -116,8 +125,8 @@ def vv_fram_erase(cleanup=True, verbose=True, debug=False):
     Instead, the 'ResetISR' symbol is located 212 bytes ABOVE the vector table, at addr=0x1FFFE0D4.
     """
     FRAM_ERASE_JLINK_CMD_FILE = "FRAM_erase.tmp.jlink"
-    FRAM_ERASE_APP_SREC = resource_path("VV_FRAM_eraser.srec")
-    FRAM_ERASE_APP_START_ADDR = 0x1FFFE0D4
+    FRAM_ERASE_APP_SREC = resource_path("VV_FRAM_eraser.srec")      # TODO: must have a separate, K32L-specific application(=SREC) in order to erase FRAM on 'AB'-type!!
+    FRAM_ERASE_APP_START_ADDR = 0x1FFFE0D4                          # NOTE: location of '.init' symbol read from .MAP-file --> app loaded in SRAM!
     #
     with open(FRAM_ERASE_JLINK_CMD_FILE, 'w') as fp:
         fp.write("halt\n")
@@ -147,6 +156,15 @@ def vv_fram_erase(cleanup=True, verbose=True, debug=False):
 def fw_prepare_target(erase=True, keep_serno=False, serial=0, cleanup=True, verbose=True, debug=False):
     status = False
     serial_num_read = 0
+    mcu_type = JLINK_TARGET_OPTIONS[JLINK_TARGET_MCU_OPTION_IDX]
+    # Determine MCU-type from sensor-type:
+    if IRRIGATION_SENSOR_REV_AA_MCU == mcu_type:
+        config_sector_offset_addr = IRRIGATION_SENSOR_REV_AA_CONFIG_START
+    elif IRRIGATION_SENSOR_REV_AB_MCU == mcu_type:
+        config_sector_offset_addr = IRRIGATION_SENSOR_REV_AB_CONFIG_START
+    else:
+        print("ERROR: no valid MCU-type specified! Just assuming sensor-type is 'AA' ...")
+        config_sector_offset_addr = IRRIGATION_SENSOR_REV_AA_CONFIG_START
     #
     with open(PRE_TASKS_CMD_FILE, 'w') as fp:
         fp.write("halt\n")
@@ -156,16 +174,16 @@ def fw_prepare_target(erase=True, keep_serno=False, serial=0, cleanup=True, verb
             fp.write("unlock Kinetis\n")      # Needed if device is programmed 1st time!
             fp.write("erase\n")
         # Set image-number =1(=FW1 startup as default):
-        fp.write("w4 0x5c00 0x00000001\n")  # Set image-number=1
+        fp.write(f"w4 0x{config_sector_offset_addr:X} 0x00000001\n")  # Set image-number=1
         # Default write given serial number into config-sector in Flash:
         if not keep_serno:
             if serial in range(1, 65355):
-                fp.write("w4 0x5c08 " + hex(serial) + "\n")  # Set serial number
+                fp.write(f"w4 0x{config_sector_offset_addr + CONFIG_SECTOR_SERIALNO_OFFSET:X} " + hex(serial) + "\n")  # Set serial number
             else:
                 print(f"Serial number = {serial} is OUT OF RANGE! Cannot use ...")
         # Readback config-values from Flash:
-        fp.write("mem32 0x00005c00,1\n")
-        fp.write("mem32 0x00005c08,1\n")
+        fp.write(f"mem32 0x{config_sector_offset_addr:X},1\n")
+        fp.write(f"mem32 0x{config_sector_offset_addr + CONFIG_SECTOR_SERIALNO_OFFSET:X},1\n")
         fp.write("q\n")
     # Run JLink w. file input:
     if not debug:
@@ -211,8 +229,7 @@ def run_fw_programming(fw_type, cleanup=True, debug=False):
         if fw_type == '2' or fw_type == 'all':
             fw2_srec = os.path.join(srec_path, "IrrigationSensorAppl_FW2.srec")
             if not os.path.exists(fw2_srec):
-                print(f"Could not write FW2 to Flash memory - SREC file '{fw1_srec}' missing!",
-                      flush=True)
+                print(f"Could not write FW2 to Flash memory - SREC file '{fw1_srec}' missing!", flush=True)
             else:
                 print(f"Writing FW2 firmware '{fw2_srec}' to boot Flash memory ...", flush=True)
                 fp.write("loadfile %s\n" % fw2_srec)
@@ -220,8 +237,7 @@ def run_fw_programming(fw_type, cleanup=True, debug=False):
         if fw_type == 'bl' or fw_type == 'all':
             bootloader_srec = os.path.join(srec_path, "IrrigationSensorBootld.srec")
             if not os.path.exists(bootloader_srec):
-                print(f"Could not write bootloader to Flash memory - SREC file '{bootloader_srec}' missing!",
-                      flush=True)
+                print(f"Could not write bootloader to Flash memory - SREC file '{bootloader_srec}' missing!", flush=True)
             else:
                 print(f"Writing bootloader firmware '{bootloader_srec}' to boot Flash memory ...", flush=True)
                 fp.write("loadfile %s\n" % bootloader_srec)
@@ -245,7 +261,15 @@ def run_fw_programming(fw_type, cleanup=True, debug=False):
 
 def verify_image_number(out_text=None, img_num=1, verbose=True):
     status = False
-    IMAGE_NUM_FLASH_ADDR = "00005C00"
+    mcu_type = JLINK_TARGET_OPTIONS[JLINK_TARGET_MCU_OPTION_IDX]
+    # Determine MCU-type from sensor-type:
+    if IRRIGATION_SENSOR_REV_AA_MCU == mcu_type:
+        IMAGE_NUM_FLASH_ADDR = f"{IRRIGATION_SENSOR_REV_AA_CONFIG_START:08X}"
+    elif IRRIGATION_SENSOR_REV_AB_MCU == mcu_type:
+        IMAGE_NUM_FLASH_ADDR = f"{IRRIGATION_SENSOR_REV_AB_CONFIG_START:08X}"
+    else:
+        print("ERROR: no valid MCU-type specified! Just assuming sensor-type is 'AA' ...")
+        IMAGE_NUM_FLASH_ADDR = f"{IRRIGATION_SENSOR_REV_AA_CONFIG_START:08X}"
     #
     print("")
     print("Output analysis:", flush=True)
@@ -270,7 +294,15 @@ def verify_image_number(out_text=None, img_num=1, verbose=True):
 def verify_serial_number(out_text=None, verify=True, serial=0, verbose=True):
     status = False
     readout = serial
-    SER_NUM_FLASH_ADDR = "00005C08"
+    mcu_type = JLINK_TARGET_OPTIONS[JLINK_TARGET_MCU_OPTION_IDX]
+    # Determine MCU-type from sensor-type:
+    if IRRIGATION_SENSOR_REV_AA_MCU == mcu_type:
+        SER_NUM_FLASH_ADDR = f"{IRRIGATION_SENSOR_REV_AA_CONFIG_START + CONFIG_SECTOR_SERIALNO_OFFSET:08X}"
+    elif IRRIGATION_SENSOR_REV_AB_MCU == mcu_type:
+        SER_NUM_FLASH_ADDR = f"{IRRIGATION_SENSOR_REV_AB_CONFIG_START + CONFIG_SECTOR_SERIALNO_OFFSET:08X}"
+    else:
+        print("ERROR: no valid MCU-type specified! Just assuming sensor-type is 'AA' ...")
+        SER_NUM_FLASH_ADDR = f"{IRRIGATION_SENSOR_REV_AA_CONFIG_START + CONFIG_SECTOR_SERIALNO_OFFSET:08X}"
     #
     print("")
     print("Output analysis:", flush=True)
