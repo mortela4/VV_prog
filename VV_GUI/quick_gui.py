@@ -684,7 +684,7 @@ class CommandLayout(QtWidgets.QGridLayout):
         status_layout.addWidget(status_label)
         self.status_out = QtWidgets.QLineEdit("Waiting for process output ...")
         self.status_out.setAccessibleName("status-indicator")
-        self.status_out.setStyleSheet("QLineEdit {background-color: rgb(255, 255, 0)}")
+        self.status_out.setStyleSheet("QLineEdit {color: black; background-color: yellow}")     # White text on yellow background is pretty hard to read ...
         status_layout.addWidget(self.status_out)
         self.addLayout(status_layout, self.rowCount() + 1, 1)
         # Another horizontal line:
@@ -875,10 +875,10 @@ class App(QtWidgets.QWidget):
     def update_status_indicator(self, status: str):
         if status == "success":
             self.opt_set.status_out.setText("PASS")
-            self.opt_set.status_out.setStyleSheet("QLineEdit {background-color: rgb(0, 255, 0)}")
+            self.opt_set.status_out.setStyleSheet("QLineEdit {background-color: green")       # Simpler than specifying 'rgb(0, 255, 0)'
         else:
             self.opt_set.status_out.setText("FAIL!")
-            self.opt_set.status_out.setStyleSheet("QLineEdit {background-color: rgb(255, 0, 0)}")
+            self.opt_set.status_out.setStyleSheet("QLineEdit {background-color: red}")       # Simpler than specifying 'rgb(255, 0, 0)'
 
     @QtCore.pyqtSlot()
     def copy_cmd(self):
