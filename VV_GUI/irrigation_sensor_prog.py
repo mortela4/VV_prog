@@ -13,7 +13,7 @@ from resource_helper import resource_path
 # ============
 VER_MAJOR = 1
 VER_MINOR = 6       # Choosing between sensor-types (so far AA, or AB) is now an option.
-VER_SUBMINOR = 0    
+VER_SUBMINOR = 1    # Fix: closed issue#1 = status reported as 'PASS' when J-Link is NOT connected.    
 
 # JLink command-line for KL27Z target attach:
 # if sys.platform == 'linux':
