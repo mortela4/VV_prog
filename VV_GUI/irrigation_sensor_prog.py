@@ -325,11 +325,11 @@ def run_irrigation_sensor_programming(path, serial, fw_type, fram_erase, erase, 
 
     mcu_type = MAP_SENSOR_TYPE_TO_MCU[sensor_type]
     # Modify J-Link setup to match target MCU:
-    JLINK_TARGET_OPTIONS[JLINK_TARGET_MCU_OPTION_IDX] = IRRIGATION_SENSOR_REV_AB_MCU
+    JLINK_TARGET_OPTIONS[JLINK_TARGET_MCU_OPTION_IDX] = mcu_type
 
     print("Startup ...", flush=True)
     # Run:
-    print(f"path={path}, fw_type={fw_type}, serial={serial}, fram_erase={fram_erase}, erase={erase},  MCU={'K32L2A41' if rev_ab_hw else 'KL27Z256'}...", flush=True)
+    print(f"path={path}, fw_type={fw_type}, serial={serial}, fram_erase={fram_erase}, erase={erase},  MCU={mcu_type}...", flush=True)
     #
     if path is None or fw_type is None or serial is None or erase is None:
         raise Exception("Not all options specified!")
