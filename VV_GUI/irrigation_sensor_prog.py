@@ -12,8 +12,8 @@ from resource_helper import resource_path
 # Version info
 # ============
 VER_MAJOR = 1
-VER_MINOR = 5       # Complete FRAM-erase is now an option.
-VER_SUBMINOR = 1    # Put device-erase as first step, and checking output from JLink.exe for 'Error'/'ERROR'.
+VER_MINOR = 6       # Choosing between sensor-types (so far AA, or AB) is now an option.
+VER_SUBMINOR = 0    
 
 # JLink command-line for KL27Z target attach:
 # if sys.platform == 'linux':

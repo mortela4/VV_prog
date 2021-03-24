@@ -6,7 +6,7 @@ block_cipher = None
 
 
 a = Analysis(['irrigation_sensor_prog.py'],
-             pathex=['P:\\MortenL\\proj_info\\VannVogn\\firm_ware\\VV_flash_prog_proj\\VV_prog\\VV_GUI'],
+             pathex=['.'],
              binaries=[('JLink.exe', '.'), ('JLinkARM.dll', '.')],
              datas=[('7sense-7-hvit.png', '.'), ('copy.png', '.'), ('VV_FRAM_eraser.srec', '.'), ('7sense.ico', '.')],
              hiddenimports=[],
@@ -35,5 +35,5 @@ exe = EXE(pyz,
           upx=False,
           upx_exclude=[],
           runtime_tmpdir=None,
-          icon='P:\\MortenL\\proj_info\\VannVogn\\firm_ware\\VV_flash_prog_proj\\VV_prog\\VV_GUI\\7sense.ico',
+          icon='7sense.ico',
           console=False)
