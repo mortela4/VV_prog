@@ -11,11 +11,11 @@ from resource_helper import resource_path
 
 # Version info
 # ============
-VER_MAJOR = 1
-VER_MINOR = 6       # Choosing between sensor-types (so far AA, or AB) is now an option.
-VER_SUBMINOR = 2    # Fix: closed issue#2 = handling 'target-prepare' for 'AB'-type sensor w. K32L2A41 MCU (setting imgNum=1 and serialNo in CONFI-sector of Flash).    
+VER_MAJOR = 1       # 1.x series is the first 'production' series.
+VER_MINOR = 7       # Changed: 'AB'-type sensor w. K32L2A41 MCU has CONFIG-sector at different location in Flash --> 0x8800 (vs. 0x5C00 for AA).
+VER_SUBMINOR = 0    #      
 
-# JLink command-line for KL27Z target attach:
+# JLink command-line for KL27Z(AA) or K32L2A41(AB) sensor-target attach:
 # if sys.platform == 'linux':
 if os.name == 'posix':
     JLINK_EXE_FILE = 'JLinkExe'
@@ -29,10 +29,12 @@ CONFIG_SECTOR_SERIALNO_OFFSET = 8       # 2 doublewords for IMAGENUM(=field no.0
 
 # 'AA'-type sensor definitions:
 IRRIGATION_SENSOR_REV_AA_MCU = 'MKL27Z256XXX4'
-IRRIGATION_SENSOR_REV_AA_CONFIG_START = 0x00005C00   # Max. bootloader size is 23KB --> FW1 starts at 23+1 = 24KB = 0x6000 offset (CONFIG=1KB)
+IRRIGATION_SENSOR_REV_AA_CONFIG_START = 0x00005C00   # Max. bootloader size is 22KB --> FW1 starts at 22+1(BL-info)+1(CONFIG) = 24KB = 0x6000 offset (CONFIG-size=1KB)
 # 'AB'-type sensor definitions:
 IRRIGATION_SENSOR_REV_AB_MCU = 'K32L2A41XXXXA'
-IRRIGATION_SENSOR_REV_AB_CONFIG_START = 0x00008C00   # Max. bootloader size is 35KB --> FW1 starts at 35+1 = 36KB = 0x9000 offset (CONFIG=1KB)
+IRRIGATION_SENSOR_REV_AB_CONFIG_START = 0x00008800   # Max. bootloader size is 32KB --> FW1 starts at 32+2(BL-info)+2(CONFIG) = 36KB = 0x9000 offset (CONFIG-size=2KB)
+
+# TODO: rather have JSON-file (or INI-file) with settings (e.g. CONFIG-address) for each specific target! All such info should reside in one place, within a few lines apart!!
 
 JLINK_TARGET_MCU_OPTION_IDX = 1   # Relates to position in list below. TODO: rather use dictionary?
 JLINK_TARGET_OPTIONS = ['-device', IRRIGATION_SENSOR_REV_AA_MCU, '-if', 'SWD', '-speed', '4000', '-autoconnect', '1']     # Default: assume 'rev.AA' sensor = KL27Z256 MCU
@@ -165,6 +167,8 @@ def fw_prepare_target(erase=True, keep_serno=False, serial=0, cleanup=True, verb
     else:
         print("ERROR: no valid MCU-type specified! Just assuming sensor-type is 'AA' ...")
         config_sector_offset_addr = IRRIGATION_SENSOR_REV_AA_CONFIG_START
+    # INFO:
+    print(f"INFO: using 0x{config_sector_offset_addr:08X} for CONFIG-sector START-adress.")
     #
     with open(PRE_TASKS_CMD_FILE, 'w') as fp:
         fp.write("halt\n")
