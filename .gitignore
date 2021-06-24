@@ -1,5 +1,6 @@
 .idea
 srec_utils/__pycache__
+VV_GUI/__pycache__
 *.pyc
 *.toc
 *.zip
@@ -24,3 +25,5 @@ VV_GUI/build/irrigation_sensor_prog/warn-irrigation_sensor_prog.txt
 VV_GUI/build/irrigation_sensor_prog/xref-irrigation_sensor_prog.html
 VV_GUI/dist/irrigation_sensor_prog.exe
 VV_GUI/dist/irrigation_sensor_prog.zip
+VV_GUI/__pycache__/quick_gui.cpython-38.pyc
+VV_GUI/__pycache__/resource_helper.cpython-38.pyc
