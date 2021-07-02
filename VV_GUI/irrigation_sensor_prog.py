@@ -30,9 +30,13 @@ CONFIG_SECTOR_SERIALNO_OFFSET = 8       # 2 doublewords for IMAGENUM(=field no.0
 # 'AA'-type sensor definitions:
 IRRIGATION_SENSOR_REV_AA_MCU = 'MKL27Z256XXX4'
 IRRIGATION_SENSOR_REV_AA_CONFIG_START = 0x00005C00   # Max. bootloader size is 22KB --> FW1 starts at 22+1(BL-info)+1(CONFIG) = 24KB = 0x6000 offset (CONFIG-size=1KB)
+IRRIGATION_SENSOR_REV_AA_FRAM_ERASE_APP_SREC_NAME = "VV_FRAM_eraser.srec"
+IRRIGATION_SENSOR_REV_AA_FRAM_ERASE_APP_START_ADDR = 0x1FFFE0D4      # NOTE: location of '.init' symbol (actually 'ResetISR') read from .MAP-file --> app loaded in SRAM! 
 # 'AB'-type sensor definitions:
 IRRIGATION_SENSOR_REV_AB_MCU = 'K32L2A41XXXXA'
 IRRIGATION_SENSOR_REV_AB_CONFIG_START = 0x00008800   # Max. bootloader size is 32KB --> FW1 starts at 32+2(BL-info)+2(CONFIG) = 36KB = 0x9000 offset (CONFIG-size=2KB)
+IRRIGATION_SENSOR_REV_AB_FRAM_ERASE_APP_SREC_NAME = "VV_revB_platform_FRAM_ERASER.srec"
+IRRIGATION_SENSOR_REV_AB_FRAM_ERASE_APP_START_ADDR = 0x1FFF8134         # Corresponding 'ResetISR' location of K32L FRAM-erase application linked to SRAM.
 
 # TODO: rather have JSON-file (or INI-file) with settings (e.g. CONFIG-address) for each specific target! All such info should reside in one place, within a few lines apart!!
 
@@ -127,8 +131,19 @@ def vv_fram_erase(cleanup=True, verbose=True, debug=False):
     Instead, the 'ResetISR' symbol is located 212 bytes ABOVE the vector table, at addr=0x1FFFE0D4.
     """
     FRAM_ERASE_JLINK_CMD_FILE = "FRAM_erase.tmp.jlink"
-    FRAM_ERASE_APP_SREC = resource_path("VV_FRAM_eraser.srec")      # TODO: must have a separate, K32L-specific application(=SREC) in order to erase FRAM on 'AB'-type!!
-    FRAM_ERASE_APP_START_ADDR = 0x1FFFE0D4                          # NOTE: location of '.init' symbol read from .MAP-file --> app loaded in SRAM!
+    # 
+    mcu_type = JLINK_TARGET_OPTIONS[JLINK_TARGET_MCU_OPTION_IDX]
+    # Settings dependent on rev.AA or rev.AB platform:
+    if IRRIGATION_SENSOR_REV_AA_MCU == mcu_type:
+        FRAM_ERASE_APP_SREC = resource_path(IRRIGATION_SENSOR_REV_AA_FRAM_ERASE_APP_SREC_NAME)      
+        FRAM_ERASE_APP_START_ADDR = IRRIGATION_SENSOR_REV_AA_FRAM_ERASE_APP_START_ADDR    # NOTE: to start application correct, as it is loaded into SRAM (=won't start automatically after a Reset)!
+    elif IRRIGATION_SENSOR_REV_AB_MCU == mcu_type:
+        FRAM_ERASE_APP_SREC = resource_path(IRRIGATION_SENSOR_REV_AB_FRAM_ERASE_APP_SREC_NAME)      
+        FRAM_ERASE_APP_START_ADDR = IRRIGATION_SENSOR_REV_AB_FRAM_ERASE_APP_START_ADDR    
+    else:
+        print("ERROR: no valid MCU-type specified! Just assuming sensor-type is 'AA' when trying to erase FRAM ...")
+        FRAM_ERASE_APP_SREC = resource_path(IRRIGATION_SENSOR_REV_AA_FRAM_ERASE_APP_SREC_NAME)      
+        FRAM_ERASE_APP_START_ADDR = IRRIGATION_SENSOR_REV_AA_FRAM_ERASE_APP_START_ADDR     
     #
     with open(FRAM_ERASE_JLINK_CMD_FILE, 'w') as fp:
         fp.write("halt\n")
