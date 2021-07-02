@@ -12,7 +12,7 @@ from resource_helper import resource_path
 # Version info
 # ============
 VER_MAJOR = 1       # 1.x series is the first 'production' series.
-VER_MINOR = 7       # Changed: 'AB'-type sensor w. K32L2A41 MCU has CONFIG-sector at different location in Flash --> 0x8800 (vs. 0x5C00 for AA).
+VER_MINOR = 8       # Changed: 'AB'-type sensor w. K32L2A41 MCU can now erase FRAM - due to dedicated application (loaded into lower 8KB Flash, for now).
 VER_SUBMINOR = 0    #      
 
 # JLink command-line for KL27Z(AA) or K32L2A41(AB) sensor-target attach:
@@ -37,6 +37,8 @@ IRRIGATION_SENSOR_REV_AB_MCU = 'K32L2A41XXXXA'
 IRRIGATION_SENSOR_REV_AB_CONFIG_START = 0x00008800   # Max. bootloader size is 32KB --> FW1 starts at 32+2(BL-info)+2(CONFIG) = 36KB = 0x9000 offset (CONFIG-size=2KB)
 IRRIGATION_SENSOR_REV_AB_FRAM_ERASE_APP_SREC_NAME = "VV_revB_platform_FRAM_ERASER.srec"
 IRRIGATION_SENSOR_REV_AB_FRAM_ERASE_APP_START_ADDR = 0x1FFF8134         # Corresponding 'ResetISR' location of K32L FRAM-erase application linked to SRAM.
+# AB has some problems running from SRAM - need to run app from Flash:
+IRRIGATION_SENSOR_REV_AB_FRAM_ERASE_APP_FLASH_SREC_NAME = "VV_revB_platform_FRAM_ERASER_Flash.srec"
 
 # TODO: rather have JSON-file (or INI-file) with settings (e.g. CONFIG-address) for each specific target! All such info should reside in one place, within a few lines apart!!
 
@@ -138,20 +140,26 @@ def vv_fram_erase(cleanup=True, verbose=True, debug=False):
         FRAM_ERASE_APP_SREC = resource_path(IRRIGATION_SENSOR_REV_AA_FRAM_ERASE_APP_SREC_NAME)      
         FRAM_ERASE_APP_START_ADDR = IRRIGATION_SENSOR_REV_AA_FRAM_ERASE_APP_START_ADDR    # NOTE: to start application correct, as it is loaded into SRAM (=won't start automatically after a Reset)!
     elif IRRIGATION_SENSOR_REV_AB_MCU == mcu_type:
-        FRAM_ERASE_APP_SREC = resource_path(IRRIGATION_SENSOR_REV_AB_FRAM_ERASE_APP_SREC_NAME)      
-        FRAM_ERASE_APP_START_ADDR = IRRIGATION_SENSOR_REV_AB_FRAM_ERASE_APP_START_ADDR    
+        # FRAM_ERASE_APP_SREC = resource_path(IRRIGATION_SENSOR_REV_AB_FRAM_ERASE_APP_SREC_NAME)      
+        # FRAM_ERASE_APP_START_ADDR = IRRIGATION_SENSOR_REV_AB_FRAM_ERASE_APP_START_ADDR    
+        # For now, we need a work-around for fixing FRAM - run app from flash!
+        FRAM_ERASE_APP_SREC = IRRIGATION_SENSOR_REV_AB_FRAM_ERASE_APP_FLASH_SREC_NAME
     else:
         print("ERROR: no valid MCU-type specified! Just assuming sensor-type is 'AA' when trying to erase FRAM ...")
         FRAM_ERASE_APP_SREC = resource_path(IRRIGATION_SENSOR_REV_AA_FRAM_ERASE_APP_SREC_NAME)      
         FRAM_ERASE_APP_START_ADDR = IRRIGATION_SENSOR_REV_AA_FRAM_ERASE_APP_START_ADDR     
     #
     with open(FRAM_ERASE_JLINK_CMD_FILE, 'w') as fp:
-        fp.write("halt\n")
-        fp.write("r\n")
+        fp.write("unlock Kinetis\n")                            # NOTE: needed if device is programmed 1st time!
+        fp.write("r\n")                                        # Reset + Halt
         fp.write(f"loadfile {FRAM_ERASE_APP_SREC}\n")
-        fp.write(f"setpc {hex(FRAM_ERASE_APP_START_ADDR)}\n")
-        fp.write("g\n")
-        fp.write("sleep 6000\n")   # Must ensure we sleep at least 5sec to allow erase-app to run to finish!
+        if IRRIGATION_SENSOR_REV_AB_MCU == mcu_type:
+            # Work-around for AB for the time being (problem running from SRAM) - Flas executable is luckily for us smaller than boot-sector!
+            pass
+        else:
+            fp.write(f"setpc {hex(FRAM_ERASE_APP_START_ADDR)}\n")
+        fp.write("g\n")             # Start the app ...
+        fp.write("sleep 6000\n")    # Must ensure we sleep at least 5sec to allow erase-app to run to finish!
         fp.write("q\n")
     # Need to sleep at least 5sec to allow FRAM-erase process to complete.
     # TODO: check when erase-app has finished blanking FRAM!
@@ -396,16 +404,19 @@ def run_irrigation_sensor_programming(path, serial, fw_type, fram_erase, erase, 
         raise Exception("No value given for serial number!\nLegal values: 1-65535")
     else:
         srec_path = path
-        # Test only example:
-        # ret_val = run_fw_programming(fw_type, serial_num, erase_flash_first, cleanup=False, debug=True)
-        # Non-test environment:
-        config_status = fw_prepare_target(erase=erase, keep_serno=False, serial=serial)
-        fram_status = True
+        # Erase FRAM memory on sensor *first* - before doing a full erase of Flash etc.
         if fram_erase:
             # Task will wait to allow FRAM-eraser application to run on target ....
             print("FRAM erase: 5 seconds is required to allow FRAM on target to be erased ...", flush=True)
             fram_status = vv_fram_erase()
             print("FRAM on target is now erased - continuing ...", flush=True)
+        else:
+            fram_status = True
+        
+        # Test only example:
+        # ret_val = run_fw_programming(fw_type, serial_num, erase_flash_first, cleanup=False, debug=True)
+        # Non-test environment:
+        config_status = fw_prepare_target(erase=erase, keep_serno=False, serial=serial)
         fw_prog_status = run_fw_programming(fw_type=fw_type)
         #
         # total_status = status1 and status2 and status3 and status4
